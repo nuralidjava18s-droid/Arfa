@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Koperasi</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:
+    linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    url("img/bg-login.jpg") center/cover no-repeat;
+}
+
+.card{
+  width:100%;
+  max-width:340px;
+  padding:20px;
+  background:rgba(255,255,255,0.1);
+  border-radius:12px;
+  color:white;
+  box-shadow:0 3px 10px rgba(0,0,0,0.2);
+}
+
+.card h3{
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.input-group{
+  position: relative;
+  margin-bottom:15px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:none;
+  outline:none;
+  font-size:14px;
+  background:rgba(255,255,255,0.2);
+  color:white;
+}
+
+input::placeholder{
+  color: rgba(255,255,255,0.7);
+}
+
+/* Tombol show password */
+.show-pass{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  border:none;
+  color:white;
+  cursor:pointer;
+  font-size:14px;
+}
+
+button#btnLogin{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#1e90ff;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* Footer */
+.footer-login{
+  position: fixed;
+  bottom: 25px;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h3>Login</h3>
+  <div class="input-group">
+    <input type="text" id="username" placeholder="Username">
+  </div>
+
+  <div class="input-group">
+    <input type="password" id="password" placeholder="Password">
+    <button type="button" class="show-pass" id="togglePass">👁</button>
+  </div>
+
+  <button id="btnLogin">Login</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* Firebase config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
+  authDomain: "arfa-c7dee.firebaseapp.com",
+  databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
+  projectId: "arfa-c7dee",
+  storageBucket: "arfa-c7dee.firebasestorage.app",
+  messagingSenderId: "468058520812",
+  appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const usersRef = ref(db,"koperasi/users");
+
+/* Toggle show/hide password */
+document.getElementById("togglePass").addEventListener("click", ()=>{
+  const pass = document.getElementById("password");
+  if(pass.type === "password"){
+    pass.type = "text";
+  } else {
+    pass.type = "password";
+  }
+});
+
+/* Login */
+document.getElementById("btnLogin").addEventListener("click", async ()=>{
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  if(!username || !password) return alert("Isi username & password");
+
+  let snap = await get(usersRef);
+  if(!snap.exists()){
+    // Jika database kosong, buat user default otomatis
+    await push(usersRef,{username:"nurali", password:"12345", role:"admin"});
+    await push(usersRef,{username:"roby", password:"12345", role:"user"});
+    alert("Database kosong, user default dibuat:\nAdmin: nurali / 12345\nUser: roby / 12345\nSilakan login ulang");
+    return;
+  }
+
+  const users = snap.val();
+  let found = null;
+  for(const key in users){
+    if(users[key].username===username && users[key].password===password){
+      found = users[key];
+      break;
+    }
+  }
+
+  if(!found) return alert("Username atau password salah");
+
+  // Simpan ke localStorage untuk role-based
+  localStorage.setItem("user", found.username);
+  localStorage.setItem("role", found.role);
+
+  alert("Login berhasil sebagai " + found.role);
+  window.location.href = "dashboard.html"; 
+});
+  
+</script>
+<div class="footer-login">
+  © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
+
+</body>
+</html>

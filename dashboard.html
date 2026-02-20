@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Koperasi</title>
+<style>
+  body{
+    
+  margin:0;
+  font-family:Arial, sans-serif;
+  
+  background:
+    linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
+    url("img/bg-login.jpg") center/cover no-repeat;
+}
+  .menu-title{
+  grid-column: 1/-1;
+  text-align:center;
+  font-size:18px;
+  font-weight:bold;
+  color:white;
+  margin-top:5px;
+  margin-bottom:5px;
+  letter-spacing:1px;
+}
+    header{
+    background:#1e90ff;color:white;padding:10px 20px;
+    display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+    position:sticky;top:0;z-index:1000;
+  }
+  .logo{width:50px;height:50px;border-radius:50%;border:2px solid #fff;background:#fff;padding:3px;}
+  .brand-text{line-height:1.1;}
+  .brand-text .subtitle{font-size:12px;opacity:0.8;}
+  .brand-text .title{font-size:16px;font-weight:bold;}
+  .user-section{position:relative;display:flex;color:yellow;-items:left;gap:10px;cursor:pointer;}
+  .user-section img{width:36px;height:36px;border-radius:50%;border:2px solid #fff;}
+  .dropdown-menu{
+    display:none;position:absolute;right:0;top:50px;background:white;color:#333;
+    border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,0.2);overflow:hidden;min-width:140px;
+  }
+  .dropdown-menu div{padding:10px;cursor:pointer;font-weight:bold;border-bottom:1px solid #eee;}
+  .menu{padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .card{background:white;padding:15px;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.1);cursor:pointer;text-align:center;font-weight:bold;}
+  .card:hover{opacity:0.9;}
+  .hidden{display:none;}
+  
+  .kas-card{
+  
+  width: 180%;
+  font-size:16px;
+  font-weight:bold;
+  padding:18px;
+  border-radius:12px;
+}
+  .kas-card{background:#32cd32;color:white;font-size:16px;}
+
+  /* Footer */
+.footer-login{
+  position: fixed;
+  bottom: 25px;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.5px;
+}
+  
+  </style>
+</head>
+<body>
+
+<header>
+  <!-- Kiri: Logo + Brand -->
+  <div style="display:flex;align-items:center;gap:12px;">
+    <img src="img/ims.png" class="logo" alt="logo">
+    <div class="brand-text">
+      <div class="subtitle">Koperasi</div>
+      <div class="title">ARFA DRIVER</div>
+    </div>
+  </div>
+
+  <!-- Kanan: User info + Dropdown -->
+  <div class="user-section" id="userDisplay">
+    <p></p>
+    <div id="userInfo"></div>
+    <span style="font-size:8px;opacity:0.8;">▼</span>
+
+    <div class="dropdown-menu" id="dropdownMenu">
+      <div onclick="logout()">Logout</div>
+    </div>
+  </div>
+</header>
+ 
+<div class="menu">
+
+  <!-- Saldo Kas -->
+  <div class="card kas-card">
+    💰 Total Kas: Rp <span id="totalKas">0</span>
+  </div>
+
+  <!-- Judul Menu -->
+  <div class="menu-title">MENU KOPERASI</div>
+
+  <!-- Menu Navigasi -->
+  <div class="card" onclick="goPage('anggota.html')">👥 Anggota</div>
+  <div class="card" onclick="goPage('kas.html')">💰 Kas</div>
+  <div class="card" onclick="goPage('simpanan.html')">💳 Simpanan</div>
+  <div class="card" onclick="goPage('pinjaman.html')">📄 Pinjaman</div>
+  <div class="card" onclick="goPage('angsuran.html')">🧾 Angsuran</div>
+  <div class="card" onclick="goPage('lap-kas.html')">📝 Laporan Kas</div>
+  <div class="card" onclick="goPage('pencairan.html')">📝 Pencairan Simpanan</div>
+  <div class="card" onclick="goPage('backup.html')">📝 Backup Data</div>
+
+  <!-- Menu Admin -->
+  <div id="menuKelolaUser" class="card hidden" onclick="goPage('kelola-user.html')">
+    🛠 Kelola User
+  </div>
+
+</div>
+  
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* Firebase config */
+const firebaseConfig = {
+  apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
+  authDomain: "arfa-c7dee.firebaseapp.com",
+  databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
+  projectId: "arfa-c7dee",
+  storageBucket: "arfa-c7dee.firebasestorage.app",
+  messagingSenderId: "468058520812",
+  appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+/* Proteksi login */
+const username = localStorage.getItem("user");
+const role = localStorage.getItem("role");
+if(!username){ window.location.href="index.html"; }
+
+document.getElementById("userInfo").innerText = username + " (" + role + ")";
+
+/* Tampilkan menu admin jika admin */
+if(role === "admin"){
+  document.getElementById("menuKelolaUser").classList.remove("hidden");
+}
+
+/* Logout & navigasi */
+window.logout = ()=>{ localStorage.clear(); window.location.href="index.html"; }
+window.goPage = (page)=>{ window.location.href = page; }
+
+/* Toggle dropdown */
+const userDisplay = document.getElementById("userDisplay");
+const dropdownMenu = document.getElementById("dropdownMenu");
+userDisplay.addEventListener("click", ()=>{
+  dropdownMenu.style.display = dropdownMenu.style.display==="block"?"none":"block";
+});
+document.addEventListener("click",(e)=>{
+  if(!userDisplay.contains(e.target)) dropdownMenu.style.display="none";
+});
+
+  /* Total Kas Realtime (FINAL FIX) */
+const kasRef = ref(db,"koperasi/kas");
+
+onValue(kasRef, snapshot=>{
+  let totalKas = 0;
+
+  if(snapshot.exists()){
+    const data = snapshot.val();
+
+    for(const k in data){
+      const item = data[k];
+      totalKas += Number(item.jumlah) || 0;
+    }
+  }
+
+  document.getElementById("totalKas").innerText =
+    totalKas.toLocaleString("id-ID");
+});
+  
+</script>
+<div class="footer-login">
+  © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
+</div>
+</body>
+</html>
