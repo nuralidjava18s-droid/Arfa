@@ -182,6 +182,9 @@ onValue(kasRef, snapshot=>{
     totalKas.toLocaleString("id-ID");
 });
   
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
 </script>
 <div class="footer-login">
   © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
