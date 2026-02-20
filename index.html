@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e90ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login Koperasi</title>
@@ -166,6 +170,15 @@ document.getElementById("btnLogin").addEventListener("click", async ()=>{
   window.location.href = "dashboard.html"; 
 });
   
+
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js")
+      .then(() => console.log("Service Worker Registered"))
+      .catch(err => console.log("SW gagal:", err));
+  });
+}
 </script>
 <div class="footer-login">
   © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
