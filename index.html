@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1e90ff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login Koperasi</title>
+
+<title>Login Koperasi Driver Khalifa</title>
+
 <style>
 body{
   margin:0;
@@ -16,59 +19,56 @@ body{
   display:flex;
   justify-content:center;
   align-items:center;
-  background:
-    linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.55)),
-    url("img/bg-login.jpg") center/cover no-repeat;
+  background: linear-gradient(to bottom right, #1e90ff, #0f3057);
 }
 
+/* Card Login */
 .card{
   width:100%;
-  max-width:340px;
-  padding:20px;
-  background:rgba(255,255,255,0.1);
-  border-radius:12px;
-  color:white;
-  box-shadow:0 3px 10px rgba(0,0,0,0.2);
-}
-
-.card h3{
+  max-width:350px;
+  padding:25px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.2);
   text-align:center;
-  margin-bottom:20px;
 }
 
+.card h2{
+  margin-bottom:20px;
+  color:#1e90ff;
+}
+
+/* Input */
 .input-group{
-  position: relative;
+  position:relative;
   margin-bottom:15px;
 }
 
 input{
   width:100%;
   padding:12px;
-  border-radius:8px;
-  border:none;
+  border-radius:10px;
+  border:1px solid #ddd;
   outline:none;
   font-size:14px;
-  background:rgba(255,255,255,0.2);
-  color:white;
 }
 
-input::placeholder{
-  color: rgba(255,255,255,0.7);
+input:focus{
+  border-color:#1e90ff;
 }
 
-/* Tombol show password */
+/* Toggle Password */
 .show-pass{
   position:absolute;
   right:10px;
   top:50%;
   transform:translateY(-50%);
-  background:transparent;
+  background:none;
   border:none;
-  color:white;
   cursor:pointer;
-  font-size:14px;
 }
 
+/* Button */
 button#btnLogin{
   width:100%;
   padding:12px;
@@ -78,24 +78,29 @@ button#btnLogin{
   color:white;
   font-weight:bold;
   cursor:pointer;
+  transition:0.3s;
+}
+
+button#btnLogin:hover{
+  background:#0f3057;
 }
 
 /* Footer */
 .footer-login{
   position: fixed;
-  bottom: 25px;
+  bottom: 20px;
   width: 100%;
   text-align: center;
   font-size: 12px;
-  color: rgba(255,255,255,0.85);
-  letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.9);
 }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h3>Login</h3>
+  <h2>Koperasi Driver Khalifa</h2>
+
   <div class="input-group">
     <input type="text" id="username" placeholder="Username">
   </div>
@@ -106,6 +111,10 @@ button#btnLogin{
   </div>
 
   <button id="btnLogin">Login</button>
+</div>
+
+<div class="footer-login">
+  © 2026 Koperasi Driver Khalifa • Sistem Informasi Koperasi
 </div>
 
 <script type="module">
@@ -122,18 +131,15 @@ const firebaseConfig = {
   messagingSenderId: "468058520812",
   appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const usersRef = ref(db,"koperasi/users");
 
-/* Toggle show/hide password */
+/* Toggle Password */
 document.getElementById("togglePass").addEventListener("click", ()=>{
   const pass = document.getElementById("password");
-  if(pass.type === "password"){
-    pass.type = "text";
-  } else {
-    pass.type = "password";
-  }
+  pass.type = pass.type === "password" ? "text" : "password";
 });
 
 /* Login */
@@ -144,10 +150,9 @@ document.getElementById("btnLogin").addEventListener("click", async ()=>{
 
   let snap = await get(usersRef);
   if(!snap.exists()){
-    // Jika database kosong, buat user default otomatis
     await push(usersRef,{username:"nurali", password:"12345", role:"admin"});
     await push(usersRef,{username:"roby", password:"12345", role:"user"});
-    alert("Database kosong, user default dibuat:\nAdmin: nurali / 12345\nUser: roby / 12345\nSilakan login ulang");
+    alert("User default dibuat.\nAdmin: nurali / 12345\nUser: roby / 12345\nSilakan login ulang");
     return;
   }
 
@@ -162,26 +167,20 @@ document.getElementById("btnLogin").addEventListener("click", async ()=>{
 
   if(!found) return alert("Username atau password salah");
 
-  // Simpan ke localStorage untuk role-based
   localStorage.setItem("user", found.username);
   localStorage.setItem("role", found.role);
 
   alert("Login berhasil sebagai " + found.role);
-  window.location.href = "dashboard.html"; 
+  window.location.href = "dashboard.html";
 });
-  
 
-
+/* Service Worker */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("sw.js")
-      .then(() => console.log("Service Worker Registered"))
-      .catch(err => console.log("SW gagal:", err));
+    navigator.serviceWorker.register("sw.js");
   });
 }
 </script>
-<div class="footer-login">
-  © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
-</div>
+
 </body>
 </html>
