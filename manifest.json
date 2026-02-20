@@ -1,0 +1,21 @@
+{
+  "name": "Koperasi ARFA Driver",
+  "short_name": "Koperasi",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1e90ff",
+  "theme_color": "#1e90ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "img/ims.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "img/ims.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
