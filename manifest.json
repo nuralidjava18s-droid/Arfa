@@ -1,7 +1,7 @@
 {
   "name": "Koperasi Driver Khalifa",
   "short_name": "Koperasi Khalifa",
-  "start_url": "dashboard.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1e90ff",
   "theme_color": "#1e90ff",
