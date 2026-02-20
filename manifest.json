@@ -1,11 +1,10 @@
 {
-  "name": "Koperasi ARFA Driver",
-  "short_name": "Koperasi",
-  "start_url": "index.html",
+  "name": "Koperasi Driver Khalifa",
+  "short_name": "Koperasi Khalifa",
+  "start_url": "dashboard.html",
   "display": "standalone",
   "background_color": "#1e90ff",
   "theme_color": "#1e90ff",
-  "orientation": "portrait",
   "icons": [
     {
       "src": "img/ims.png",
