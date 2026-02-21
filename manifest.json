@@ -2,6 +2,7 @@
   "name": "Koperasi Driver Khalifa",
   "short_name": "Koperasi",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
