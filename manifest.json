@@ -1,18 +1,19 @@
 {
   "name": "Koperasi Driver Khalifa",
-  "short_name": "Koperasi Khalifa",
-  "start_url": "index.html",
+  "short_name": "Koperasi",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#1e90ff",
-  "theme_color": "#1e90ff",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Aplikasi Koperasi Driver Khalifa untuk admin dan user monitoring transaksi.",
   "icons": [
     {
-      "src": "img/ims.png",
+      "src": "img/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "img/ims.png",
+      "src": "img/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
