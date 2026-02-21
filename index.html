@@ -50,7 +50,6 @@ body{
   box-shadow:0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* ================= JUDUL ================= */
 .card h3{
   margin-top:0;
   margin-bottom:20px;
@@ -58,7 +57,6 @@ body{
   font-weight:bold;
 }
 
-/* ================= INPUT ================= */
 .input-group{
   position:relative;
   margin-bottom:15px;
@@ -79,7 +77,6 @@ body{
   color: rgba(255,255,255,0.7);
 }
 
-/* Tombol show/hide password */
 .show-pass{
   position:absolute;
   right:10px;
@@ -94,7 +91,6 @@ body{
   font-size:18px;
 }
 
-/* ================= TOMBOL LOGIN ================= */
 #btnLogin{
   width:100%;
   padding:12px;
@@ -113,7 +109,6 @@ body{
   opacity:0.85;
 }
 
-/* ================= FOOTER ================= */
 .footer-login{
   position: fixed;
   bottom: 15px;
@@ -129,9 +124,7 @@ body{
 <body>
 
 <div class="card">
-  <!-- Logo Koperasi -->
   <img src="img/icon-192.png" alt="Logo Koperasi">
-
   <h3>Login Koperasi</h3>
   
   <div class="input-group">
@@ -150,11 +143,11 @@ body{
   © 2026 Koperasi Driver Arfa • Sistem Informasi Koperasi by Nur ali
 </div>
 
+<!-- FIREBASE -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, get, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-/* Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
@@ -169,13 +162,11 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const usersRef = ref(db,"koperasi/users");
 
-/* Toggle show/hide password */
 document.getElementById("togglePass").addEventListener("click", ()=>{
   const pass = document.getElementById("password");
   pass.type = pass.type === "password" ? "text" : "password";
 });
 
-/* Login */
 document.getElementById("btnLogin").addEventListener("click", async ()=>{
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value.trim();
@@ -187,7 +178,7 @@ document.getElementById("btnLogin").addEventListener("click", async ()=>{
   if(!snap.exists()){
     await push(usersRef,{username:"nurali", password:"12345", role:"admin"});
     await push(usersRef,{username:"roby", password:"12345", role:"user"});
-    alert("Database kosong, user default dibuat:\nAdmin: nurali / 12345\nUser: roby / 12345\nSilakan login ulang");
+    alert("Database kosong, user default dibuat.\nSilakan login ulang.");
     return;
   }
 
@@ -208,6 +199,17 @@ document.getElementById("btnLogin").addEventListener("click", async ()=>{
   alert("Login berhasil sebagai " + found.role);
   window.location.href = "dashboard.html";
 });
+</script>
+
+<!-- REGISTER SERVICE WORKER -->
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then(reg => console.log("SW registered:", reg.scope))
+      .catch(err => console.log("SW failed:", err));
+  });
+}
 </script>
 
 </body>
