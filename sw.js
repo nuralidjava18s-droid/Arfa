@@ -1,4 +1,4 @@
-const CACHE_NAME = "arfa-koperasi-v1";
+const CACHE_NAME = "arfa-koperasi-v2";
 const urlsToCache = [
   "./",
   "./index.html",
