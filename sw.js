@@ -1,18 +1,17 @@
-
 const CACHE_NAME = "arfa-koperasi-v1";
 const urlsToCache = [
-  "/",
-  "/index.html",
-  "/dashboard.html",
-  "/anggota.html",
-  "/kas.html",
-  "/simpanan.html",
-  "/pinjaman.html",
-  "/angsuran.html",
-  "/lap-kas.html",
-  "/pencairan.html",
-  "/backup.html",
-  "/manifest.json"
+  "./",
+  "./index.html",
+  "./dashboard.html",
+  "./anggota.html",
+  "./kas.html",
+  "./simpanan.html",
+  "./pinjaman.html",
+  "./angsuran.html",
+  "./lap-kas.html",
+  "./pencairan.html",
+  "./backup.html",
+  "./manifest.json"
 ];
 
 self.addEventListener("install", event => {
