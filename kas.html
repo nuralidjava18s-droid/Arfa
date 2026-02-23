@@ -10,7 +10,7 @@ body{
   font-family:Arial;
   margin:0;
   background:#f4f6f9;
-  font-size:13px;
+  font-size:14px;
 }
 header{
   background:#1e90ff;
@@ -23,59 +23,68 @@ header{
 .container{ padding:15px; }
 .card{
   background:white;
-  padding:12px;
-  margin-bottom:12px;
+  padding:15px;
+  margin-bottom:15px;
   border-radius:10px;
   box-shadow:0 3px 8px rgba(0,0,0,.08);
 }
 input,select{
   width:100%;
-  padding:6px;
-  margin-bottom:6px;
-  font-size:13px;
+  padding:8px;
+  margin-bottom:8px;
 }
 button{
-  padding:6px 10px;
+  padding:8px 12px;
   border:none;
   border-radius:6px;
   background:#1e90ff;
   color:white;
-  font-size:12px;
+  cursor:pointer;
 }
-button:disabled{ background:#aaa; cursor:not-allowed; }
-.row{ display:flex; justify-content:space-between; margin-bottom:4px; }
-.title{ font-weight:bold; margin-top:8px; }
-.masuk{ color:green; }
-.keluar{ color:red; }
-.total{ font-weight:bold; font-size:14px; }
+.total{
+  font-weight:bold;
+  font-size:16px;
+}
+.row{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:5px;
+}
+.transaksi{
+  border-bottom:1px solid #ddd;
+  padding:8px 0;
+}
+.masuk{ color:green; font-weight:bold; }
+.keluar{ color:red; font-weight:bold; }
 </style>
-
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
 <header>
   <div>💰 Kas Koperasi</div>
-  <div>
-    <button onclick="window.location='dashboard.html'">Kembali</button>
-    <button id="btnPDF">Download PDF</button>
-  </div>
+  <button onclick="window.location='dashboard.html'">Kembali</button>
 </header>
 
 <div class="container">
 
-  <!-- TOTAL SALDO -->
+  <!-- SALDO -->
   <div class="card total">
-    Saldo Akhir : Rp <span id="saldoAkhir">0</span>
+    <div>💵 Cash : Rp <span id="saldoCash">0</span></div>
+    <div>🏦 Bank : Rp <span id="saldoBank">0</span></div>
+    <hr>
+    <div>💰 Total : Rp <span id="saldoTotal">0</span></div>
   </div>
 
-  <!-- INPUT KAS MANUAL -->
+  <!-- INPUT -->
   <div class="card">
     <h3>Input Kas Manual</h3>
 
-    <select id="jenis">
+    <select id="sumberKas">
+      <option value="cash">Cash</option>
+      <option value="bank">Bank</option>
+    </select>
+
+    <select id="tipe">
       <option value="masuk">Kas Masuk</option>
       <option value="keluar">Kas Keluar</option>
     </select>
@@ -86,19 +95,19 @@ button:disabled{ background:#aaa; cursor:not-allowed; }
     <button id="btnSimpan">Simpan</button>
   </div>
 
-  <!-- RINGKASAN -->
+  <!-- RIWAYAT -->
   <div class="card">
-    <h3>Ringkasan Kas</h3>
-    <div id="ringkasan"></div>
+    <h3>Riwayat Transaksi</h3>
+    <div id="riwayat"></div>
   </div>
 
 </div>
 
 <script type="module">
-  
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, onValue, get } 
+import { getDatabase, ref, push, onValue } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
@@ -111,194 +120,97 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-const username = localStorage.getItem("user");
-const role = localStorage.getItem("role") || "user";
-if(!username) window.location.href = "index.html";
-
-// tombol simpan hanya untuk admin
-const btnSimpan = document.getElementById("btnSimpan");
-if(role !== "admin") btnSimpan.disabled = true;
-
 const kasRef = ref(db,"koperasi/kas");
-const simpananRef = ref(db,"koperasi/simpanan");
-const pinjamanRef = ref(db,"koperasi/pinjaman");
-const angsuranRef = ref(db,"koperasi/angsuran");
 
-let kasMasuk = 0, kasKeluar = 0, simpanan = 0, angsuran = 0, pinjaman = 0;
+/* ================= SIMPAN ================= */
+document.getElementById("btnSimpan").addEventListener("click", async ()=>{
 
-function updateRingkasan(){
-  const totalMasuk = kasMasuk + simpanan + angsuran;
-  const totalKeluar = kasKeluar + pinjaman;
-  const saldo = totalMasuk - totalKeluar;
-
-  document.getElementById("ringkasan").innerHTML = `
-    <div class="title masuk">MASUK</div>
-    <div class="row"><span>Kas Masuk</span><span>Rp ${kasMasuk.toLocaleString("id-ID")}</span></div>
-    <div class="row"><span>Simpanan</span><span>Rp ${simpanan.toLocaleString("id-ID")}</span></div>
-    <div class="row"><span>Angsuran</span><span>Rp ${angsuran.toLocaleString("id-ID")}</span></div>
-    <div class="row total"><span>Total Masuk</span><span>Rp ${totalMasuk.toLocaleString("id-ID")}</span></div>
-
-    <br>
-
-    <div class="title keluar">KELUAR</div>
-    <div class="row"><span>Kas Keluar (Biaya)</span><span>Rp ${kasKeluar.toLocaleString("id-ID")}</span></div>
-    <div class="row"><span>Pinjaman Anggota</span><span>Rp ${pinjaman.toLocaleString("id-ID")}</span></div>
-    <div class="row total"><span>Total Keluar</span><span>Rp ${totalKeluar.toLocaleString("id-ID")}</span></div>
-  `;
-
-  document.getElementById("saldoAkhir").innerText = saldo.toLocaleString("id-ID");
-}
-
-// ===== REALTIME DATA =====
-  onValue(kasRef, snapshot => { 
-  kasMasuk = 0; 
-  kasKeluar = 0; 
-
-  if(snapshot.exists()){ 
-    const data = snapshot.val(); 
-
-    for(const k in data){ 
-      const i = data[k]; 
-
-      // ✅ hanya kas manual yang dihitung sebagai kas manual
-      if(!i.sumber || i.sumber === "manual"){
-
-        if(i.jenis === "masuk"){
-          kasMasuk += Number(i.jumlah);
-        }
-
-        if(i.jenis === "keluar"){
-          kasKeluar += Number(i.jumlah);
-        }
-
-      }
-
-    } 
-  } 
-
-  updateRingkasan(); 
-});
-onValue(simpananRef, snapshot => { simpanan=0; if(snapshot.exists()){ const data=snapshot.val(); for(const k in data) simpanan+=Number(data[k].jumlah); } updateRingkasan(); });
-onValue(angsuranRef, snapshot => { angsuran=0; if(snapshot.exists()){ const data=snapshot.val(); for(const k in data) angsuran+=Number(data[k].jumlah); } updateRingkasan(); });
-onValue(pinjamanRef, snapshot => { pinjaman=0; if(snapshot.exists()){ const data=snapshot.val(); for(const k in data) pinjaman+=Number(data[k].jumlah); } updateRingkasan(); });
-
-// ===== TAMBAH KAS =====
-btnSimpan.addEventListener("click", async ()=>{
-  const jenis = document.getElementById("jenis").value;
+  const sumberKas = document.getElementById("sumberKas").value;
+  const tipe = document.getElementById("tipe").value;
   const jumlah = Number(document.getElementById("jumlah").value);
   const ket = document.getElementById("keterangan").value;
 
-  if(!jumlah || jumlah<=0) return alert("Jumlah wajib diisi");
+  if(!jumlah || jumlah<=0){
+    alert("Jumlah wajib diisi");
+    return;
+  }
 
-  await push(kasRef,{ jenis, jumlah, keterangan:ket, tanggal:new Date().toLocaleString() });
+  await push(kasRef,{
+    tipe,
+    kategori:"manual",
+    sumberKas,
+    jumlah,
+    keterangan: ket || "-",
+    tanggal: Date.now()  });
 
   document.getElementById("jumlah").value="";
   document.getElementById("keterangan").value="";
 });
 
-// ===== EXPORT PDF LENGKAP =====
-document.getElementById("btnPDF").addEventListener("click", async ()=>{
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+/* ================= HITUNG & TAMPIL ================= */
+onValue(kasRef, snapshot => {
 
-  doc.setFontSize(16);
-  doc.text("LAPORAN KAS", 14, 20);
-  doc.setFontSize(12);
-  doc.text("Koperasi ARFA Khalifa IMS", 14, 30);
+  let masukCash=0, keluarCash=0;
+  let masukBank=0, keluarBank=0;
 
-  // Ambil semua transaksi gabungan
-  let laporanData = [];
+  const riwayatDiv = document.getElementById("riwayat");
+  riwayatDiv.innerHTML="";
 
-  // Kas manual
-  const kasSnap = await get(kasRef);
-  if(kasSnap.exists()){
-    const data = kasSnap.val();
-    for(const key in data){
-      laporanData.push({
-        tanggal: data[key].tanggal,
-        keterangan: data[key].keterangan || "Kas Manual",
-        masuk: data[key].jenis==="masuk" ? Number(data[key].jumlah) : 0,
-        keluar: data[key].jenis==="keluar" ? Number(data[key].jumlah) : 0
-      });
+  if(snapshot.exists()){
+    const data = snapshot.val();
+
+    for(const k in data){
+      const i = data[k];
+      const jumlah = Number(i.jumlah) || 0;
+      const tipe = i.tipe || "masuk";
+      const sumberKas = i.sumberKas || "cash";
+
+      if(sumberKas==="cash"){
+        if(tipe==="masuk") masukCash+=jumlah;
+        if(tipe==="keluar") keluarCash+=jumlah;
+      }
+
+      if(sumberKas==="bank"){
+        if(tipe==="masuk") masukBank+=jumlah;
+        if(tipe==="keluar") keluarBank+=jumlah;
+      }
+
+      /* TAMPIL RIWAYAT BARU */
+      const div = document.createElement("div");
+      div.className="transaksi";
+
+      div.innerHTML=`
+        <div class="row">
+          <div>
+            <span class="${tipe}">
+              ${tipe==="masuk" ? "MASUK" : "KELUAR"}
+            </span>
+            (${sumberKas.toUpperCase()})
+          </div>
+          <div class="${tipe}">
+            Rp ${jumlah.toLocaleString("id-ID")}
+          </div>
+        </div>
+        <div>${i.keterangan} - ${i.tanggal}</div>
+      `;
+
+      riwayatDiv.prepend(div);
     }
   }
 
-  // Simpanan masuk
-  const simpananSnap = await get(simpananRef);
-  if(simpananSnap.exists()){
-    const data = simpananSnap.val();
-    for(const key in data){
-      laporanData.push({
-        tanggal: data[key].tanggal,
-        keterangan: `Simpanan - ${data[key].nama}`,
-        masuk: Number(data[key].jumlah),
-        keluar: 0
-      });
-    }
-  }
+  const saldoCash = masukCash - keluarCash;
+  const saldoBank = masukBank - keluarBank;
+  const total = saldoCash + saldoBank;
 
-  // Angsuran masuk
-  const angsuranSnap = await get(angsuranRef);
-  if(angsuranSnap.exists()){
-    const data = angsuranSnap.val();
-    for(const key in data){
-      laporanData.push({
-        tanggal: data[key].tanggal,
-        keterangan: `Angsuran - ${data[key].nama}`,
-        masuk: Number(data[key].jumlah),
-        keluar: 0
-      });
-    }
-  }
+  document.getElementById("saldoCash").innerText =
+    saldoCash.toLocaleString("id-ID");
 
-  // Pinjaman keluar
-  const pinjamanSnap = await get(pinjamanRef);
-  if(pinjamanSnap.exists()){
-    const data = pinjamanSnap.val();
-    for(const key in data){
-      laporanData.push({
-        tanggal: data[key].tanggal,
-        keterangan: `Pinjaman - ${data[key].nama}`,
-        masuk: 0,
-        keluar: Number(data[key].jumlah)
-      });
-    }
-  }
+  document.getElementById("saldoBank").innerText =
+    saldoBank.toLocaleString("id-ID");
 
-  // Urutkan tanggal
-  laporanData.sort((a,b)=> new Date(a.tanggal) - new Date(b.tanggal));
-
-  const tableColumn = ["Tanggal","Keterangan","Masuk","Keluar"];
-  const tableRows = laporanData.map(item=>[
-    item.tanggal,
-    item.keterangan,
-    item.masuk ? "Rp " + item.masuk.toLocaleString("id-ID") : "-",
-    item.keluar ? "Rp " + item.keluar.toLocaleString("id-ID") : "-"
-  ]);
-
-  doc.autoTable({
-    head:[tableColumn],
-    body:tableRows,
-    startY:40
-  });
-
-  // Hitung total
-  let totalMasuk = 0, totalKeluar = 0, saldo = 0;
-  laporanData.forEach(item=>{
-    totalMasuk += item.masuk;
-    totalKeluar += item.keluar;
-    saldo += item.masuk - item.keluar;
-  });
-
-  doc.setFontSize(12);
-  doc.text(`Total Masuk: Rp ${totalMasuk.toLocaleString("id-ID")}`, 14, doc.lastAutoTable.finalY + 10);
-  doc.text(`Total Keluar: Rp ${totalKeluar.toLocaleString("id-ID")}`, 14, doc.lastAutoTable.finalY + 20);
-  doc.text(`Saldo: Rp ${saldo.toLocaleString("id-ID")}`, 14, doc.lastAutoTable.finalY + 30);
-
-  doc.save("laporan_kas.pdf");
+  document.getElementById("saldoTotal").innerText =
+    total.toLocaleString("id-ID");
 });
-
 </script>
 
 </body>

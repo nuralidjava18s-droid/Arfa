@@ -11,23 +11,18 @@
 <meta name="theme-color" content="#1e90ff">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-  
-  <title>Dashboard Koperasi</title>
+
+<title>Dashboard Koperasi</title>
 
 <style>
-  @media (display-mode: standalone) {
-  body {
-    background:#f4f6f9;
-  }
-}
-  body{
-  overscroll-behavior: none;
+body{
+  overscroll-behavior:none;
   margin:0;
   font-family:Arial, sans-serif;
   background:#f4f6f9;
 }
 
-/* ================= HEADER ================= */
+/* HEADER */
 header{
   background: linear-gradient(to right, #1e90ff, #0f3057);
   color:white;
@@ -89,7 +84,7 @@ header{
   background:#f0f0f0;
 }
 
-/* ================= MENU ================= */
+/* MENU */
 .menu{
   padding:20px;
   display:grid;
@@ -173,8 +168,11 @@ header{
 <div class="menu">
 
   <div class="kas-card">
-    💰 Total Kas: Rp <span id="totalKas">0</span>
-  </div>
+  <div>💵 Cash : Rp <span id="totalCash">0</span></div>
+  <div>🏦 Bank : Rp <span id="totalBank">0</span></div>
+  <hr style="border:0;border-top:1px solid rgba(255,255,255,0.5);margin:10px 0;">
+  <div>💰 Total Kas : Rp <span id="totalKas">0</span></div>
+</div>
 
   <div class="menu-title">MENU KOPERASI</div>
 
@@ -215,19 +213,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* Proteksi login */
+/* Proteksi login & session code */
 const username = localStorage.getItem("user");
 const role = localStorage.getItem("role");
+const sessionCode = localStorage.getItem("sessionCode");
 
-if(!username){
+// Sesuaikan kode akses
+const validCodes = { admin:"ali26", user:"user26" };
+
+if(!username || !role || sessionCode !== validCodes[role]){
+  alert("Akses ditolak! Silakan login ulang.");
   window.location.href="index.html";
-}
-
-document.getElementById("userInfo").innerText = username + " (" + role + ")";
-
-/* Role Admin */
-if(role === "admin"){
-  document.getElementById("menuKelolaUser").classList.remove("hidden");
+} else {
+  document.getElementById("userInfo").innerText = username + " (" + role + ")";
+  if(role === "admin"){
+    document.getElementById("menuKelolaUser").classList.remove("hidden");
+  }
 }
 
 /* Logout */
@@ -255,22 +256,48 @@ document.addEventListener("click",(e)=>{
     dropdownMenu.style.display="none";
   }
 });
+  
+  /* ================= TOTAL KAS REALTIME ================= */
+/* ================= TOTAL KAS REALTIME ================= */
 
-/* Total Kas Realtime */
 const kasRef = ref(db,"koperasi/kas");
 
 onValue(kasRef, snapshot=>{
-  let totalKas = 0;
+
+  let totalCash = 0;
+  let totalBank = 0;
 
   if(snapshot.exists()){
     const data = snapshot.val();
+
     for(const k in data){
-      totalKas += Number(data[k].jumlah) || 0;
+      const item = data[k];
+
+      const jumlah = Number(item.jumlah) || 0;
+      const tipe = item.tipe || "masuk";
+      const sumberKas = item.sumberKas || "cash";
+
+      if(sumberKas === "cash"){
+        if(tipe === "masuk") totalCash += jumlah;
+        if(tipe === "keluar") totalCash -= jumlah;
+      }
+
+      if(sumberKas === "bank"){
+        if(tipe === "masuk") totalBank += jumlah;
+        if(tipe === "keluar") totalBank -= jumlah;
+      }
     }
   }
 
+  document.getElementById("totalCash").innerText =
+    totalCash.toLocaleString("id-ID");
+
+  document.getElementById("totalBank").innerText =
+    totalBank.toLocaleString("id-ID");
+
   document.getElementById("totalKas").innerText =
-    totalKas.toLocaleString("id-ID");
+    (totalCash + totalBank).toLocaleString("id-ID");
+
 });
 
 if ('serviceWorker' in navigator) {

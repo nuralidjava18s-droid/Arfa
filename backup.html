@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backup, Restore & Reset Data</title>
-
+<title>Restore Backup Lengkap</title>
 <style>
-body{font-family:Arial,sans-serif;margin:0;background:#f4f6f9;}
+body{font-family:Arial;margin:0;background:#f4f6f9;}
 header{background:#1e90ff;color:white;padding:15px;display:flex;justify-content:space-between;align-items:center;}
 .container{padding:20px;}
 .card{background:white;padding:15px;margin-bottom:15px;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.1);}
@@ -14,39 +13,37 @@ button{padding:8px 12px;margin:5px 0;cursor:pointer;border:none;border-radius:6p
 button.danger{background:red;}
 input[type=file]{margin:10px 0;}
 h4{margin:5px 0;}
+.log-item{font-size:12px;margin-bottom:4px;}
 </style>
 </head>
 <body>
 
 <header>
-  <div>Backup, Restore & Reset Data</div>
-  <button id="btnKembali">Kembali</button>
+  <div>Restore Backup Otomatis</div>
+  <button onclick="window.location='dashboard.html'">Kembali</button>
 </header>
 
 <div class="container">
 
-  <!-- Admin Forms -->
-  <div class="card" id="adminForms">
-    <h3>Admin Panel</h3>
-
-    <!-- Backup -->
-    <h4>Backup Data</h4>
-    <button id="btnBackup">Download Backup JSON</button>
-
-    <!-- Restore -->
-    <h4>Restore Data</h4>
-    <input type="file" id="fileRestore" accept=".json">
-    <button id="btnRestore">Restore Data</button>
-
-    <!-- Reset -->
-    <h4>Reset Semua Data</h4>
-    <button id="btnReset" class="danger">Reset / Hapus Semua Data</button>
+  <div class="card">
+    <h3>Backup Otomatis</h3>
+    <button id="btnBackup">Backup Sekarang</button>
   </div>
 
-  <!-- Log Aktivitas -->
-  <div class="card" id="logCard">
+  <div class="card">
+    <h3>Restore Backup Lama</h3>
+    <input type="file" id="fileRestore" accept=".json">
+    <button id="btnRestore">Restore Otomatis</button>
+  </div>
+
+  <div class="card">
+    <h3>Reset / Hapus Semua Data</h3>
+    <button id="btnReset" class="danger">Hapus Semua Data</button>
+  </div>
+
+  <div class="card">
     <h3>Log Aktivitas Terakhir</h3>
-    <div id="logContainer"></div>
+    <div id="logContainer">Memuat log...</div>
   </div>
 
 </div>
@@ -68,20 +65,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* ===== PROTEKSI LOGIN & ROLE ===== */
+/* Proteksi login & role */
 const username = localStorage.getItem("user");
 const role = localStorage.getItem("role") || "user";
 if(!username) window.location.href="index.html";
+if(role !== "admin") alert("Hanya admin yang bisa restore atau reset!");
 
-/* Hanya admin yang lihat form admin */
-if(role !== "admin") document.getElementById("adminForms").style.display = "none";
-
-/* Tombol Kembali */
-document.getElementById("btnKembali").addEventListener("click", ()=>{
-  window.location.href="dashboard.html";
-});
-
-/* ===== LOG Aktivitas ===== */
+// ===== LOG =====
 const logRef = ref(db,"koperasi/logs");
 function addLog(action){
   push(logRef,{
@@ -90,7 +80,6 @@ function addLog(action){
     timestamp: new Date().toLocaleString()
   });
 }
-
 function loadLogs(){
   const logContainer = document.getElementById("logContainer");
   onValue(logRef, snapshot=>{
@@ -98,59 +87,127 @@ function loadLogs(){
     if(snapshot.exists()){
       const logs = snapshot.val();
       const arr = Object.values(logs).sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
-      arr.slice(0,10).forEach(log=>{
+      arr.slice(0,20).forEach(log=>{
         const div = document.createElement("div");
+        div.className="log-item";
         div.textContent = `${log.timestamp} - ${log.user} - ${log.action}`;
         logContainer.appendChild(div);
       });
-    } else {
-      logContainer.innerHTML = "Belum ada log aktivitas.";
-    }
+    } else logContainer.innerHTML="Belum ada log aktivitas.";
   });
 }
 loadLogs();
 
-/* ===== BACKUP ===== */
-document.getElementById("btnBackup")?.addEventListener("click", async ()=>{
+// ===== BACKUP OTOMATIS =====
+document.getElementById("btnBackup").addEventListener("click", async ()=>{
   const koperasiRef = ref(db,"koperasi");
-  const snapshot = await get(koperasiRef);
-  if(!snapshot.exists()){ alert("Data kosong!"); return; }
+  const snap = await get(koperasiRef);
+  if(!snap.exists()){ alert("Data kosong!"); return; }
 
-  const data = snapshot.val();
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const data = snap.val();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
+
+  const fileName = `backup_koperasi_${new Date().toISOString().slice(0,10)}.json`;
   const a = document.createElement("a");
   a.href = url;
-  a.download = `backup_koperasi_${new Date().toISOString().slice(0,10)}.json`;
+  a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
 
+  // Notifikasi nama file
+  alert(`Backup selesai!\nNama file: ${fileName}\nFile tersimpan di folder Download default browser.`);
+
   addLog("Backup Data");
 });
-
-/* ===== RESTORE ===== */
-document.getElementById("btnRestore")?.addEventListener("click", async ()=>{
+// ===== RESTORE OTOMATIS =====
+document.getElementById("btnRestore").addEventListener("click", ()=>{
   const fileInput = document.getElementById("fileRestore");
-  if(!fileInput.files[0]) return alert("Pilih file JSON dulu!");
-
+  if(!fileInput.files[0]) return alert("Pilih file backup JSON dulu!");
   const file = fileInput.files[0];
   const reader = new FileReader();
+
   reader.onload = async function(e){
     try{
       const json = JSON.parse(e.target.result);
-      await set(ref(db,"koperasi"), json);
-      alert("Restore data berhasil!");
-      addLog("Restore Data");
+      if(!json) return alert("File tidak valid!");
+
+      // Backup dulu sebelum restore
+      const koperasiRef = ref(db,"koperasi");
+      const snap = await get(koperasiRef);
+      if(snap.exists()){
+        const dataOld = snap.val();
+        const blobOld = new Blob([JSON.stringify(dataOld,null,2)], {type:"application/json"});
+        const urlOld = URL.createObjectURL(blobOld);
+        const aOld = document.createElement("a");
+        aOld.href = urlOld;
+        aOld.download = `backup_sebelum_restore_${new Date().toISOString().slice(0,10)}.json`;
+        aOld.click();
+        URL.revokeObjectURL(urlOld);
+        addLog("Backup Sebelum Restore");
+      }
+
+      // Mapping field lama → baru
+      const newData = {anggota:{}, pinjaman:{}, angsuran:{}, kas:{}};
+
+      if(json.anggota){
+        for(const k in json.anggota){
+          const a = json.anggota[k];
+          newData.anggota[k] = {nama:a.nama||"", saldo:Number(a.saldo)||0};
+        }
+      }
+      if(json.pinjaman){
+        for(const k in json.pinjaman){
+          const p = json.pinjaman[k];
+          newData.pinjaman[k] = {
+            anggotaId: p.anggotaId||"",
+            nama: p.nama||"",
+            jumlah:Number(p.jumlah)||0,
+            keterangan:p.keterangan||"",
+            tanggal:p.tanggal ? new Date(p.tanggal).toISOString() : new Date().toISOString()
+          };
+        }
+      }
+      if(json.angsuran){
+        for(const k in json.angsuran){
+          const a = json.angsuran[k];
+          newData.angsuran[k] = {
+            pinjamanId: a.pinjamanId||"",
+            nama:a.nama||"",
+            jumlah:Number(a.jumlah)||0,
+            keterangan:a.keterangan||"",
+            tanggal:a.tanggal ? new Date(a.tanggal).toISOString() : new Date().toISOString(),
+            sumberKas:a.sumberKas||a.sumber||"cash"
+          };
+        }
+      }
+      if(json.kas){
+        for(const k in json.kas){
+          const c = json.kas[k];
+          newData.kas[k] = {
+            sumber:c.sumber||"",
+            jumlah:Number(c.jumlah)||0,
+            tanggal:c.tanggal ? new Date(c.tanggal).toISOString() : new Date().toISOString()
+          };
+        }
+      }
+
+      // Set data baru
+      await set(koperasiRef,newData);
+      alert("Restore otomatis selesai!");
+      addLog("Restore Otomatis");
+
     }catch(err){
-      alert("File tidak valid!");
       console.error(err);
+      alert("Restore gagal! File tidak valid");
     }
   }
+
   reader.readAsText(file);
 });
 
-/* ===== RESET ===== */
-document.getElementById("btnReset")?.addEventListener("click", async ()=>{
+// ===== RESET / HAPUS DATA =====
+document.getElementById("btnReset").addEventListener("click", async ()=>{
   if(confirm("Yakin ingin menghapus semua data koperasi? Tindakan ini tidak bisa dibatalkan!")){
     await remove(ref(db,"koperasi"));
     alert("Semua data berhasil dihapus!");

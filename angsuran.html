@@ -19,22 +19,21 @@ header{
   justify-content:space-between;
   align-items:center;
 }
-.container{padding:15px;}
+.container{padding:10px;}
 .card{
   background:white;
-  padding:15px;
+  padding:10px;
   margin-bottom:15px;
   border-radius:10px;
-  box-shadow:0 3px 10px rgba(0,0,0,.1);
+  font-size:12px;
+  box-shadow:0 3px 10px rgba(0,0,0,0);
 }
-.card.lunas{border-left:5px solid green;background:#e6ffe6;}
-.card.belum{border-left:5px solid red;background:#ffe5e5;}
 button{padding:6px 10px;margin-top:5px;cursor:pointer;border:none;border-radius:5px;background:#1e90ff;color:white;}
 button:disabled{background:#aaa; cursor:not-allowed;}
 input,select{padding:6px;margin-bottom:8px;width:100%;}
 .total{font-weight:bold;font-size:16px;}
 .warning{color:red;font-weight:bold}
-  </style>
+</style>
 </head>
 <body>
 
@@ -56,6 +55,10 @@ input,select{padding:6px;margin-bottom:8px;width:100%;}
     </select>
     <input type="number" id="jumlahAngsuran" placeholder="Jumlah Angsuran">
     <input type="text" id="ketAngsuran" placeholder="Keterangan">
+    <select id="sumberAngsuran">
+      <option value="cash">Cash</option>
+      <option value="bank">Bank</option>
+    </select>
     <button onclick="tambahAngsuran()">Simpan Angsuran</button>
   </div>
 
@@ -64,7 +67,16 @@ input,select{padding:6px;margin-bottom:8px;width:100%;}
     Total Pinjaman: Rp <span id="totalPinjaman">0</span><br>
     Total Angsuran: Rp <span id="totalAngsuran">0</span>
   </div>
-
+<div class="card">
+  <select id="filterSumber">
+    <option value="semua">Semua</option>
+    <option value="cash">Cash</option>
+    <option value="bank">Bank</option>
+  </select>
+  <button onclick="tampilkanLaporan()">Tampilkan</button>
+</div>
+  
+  
   <!-- Card laporan -->
   <div id="cardsContainer" style="display:none;"></div>
 
@@ -142,6 +154,7 @@ loadDropdown().then(()=>{
 
 /* TAMPILKAN LAPORAN */
 window.tampilkanLaporan = async function(){
+  const sumberFilter = document.getElementById("filterSumber").value;
   const container = document.getElementById("cardsContainer");
   container.style.display="block";
   container.innerHTML="";
@@ -163,8 +176,11 @@ window.tampilkanLaporan = async function(){
 
       for(const a in angsData){
         if(angsData[a].pinjamanId === key){
-          angsTotal += Number(angsData[a].jumlah);
-          tglTerakhir = angsData[a].tanggal; // tanggal terakhir
+          // filter Cash / Bank
+          if(sumberFilter==="semua" || angsData[a].sumber === sumberFilter){
+            angsTotal += Number(angsData[a].jumlah);
+            tglTerakhir = angsData[a].tanggal;
+          }
         }
       }
 
@@ -172,18 +188,20 @@ window.tampilkanLaporan = async function(){
       totalAngsuran += angsTotal;
 
       const sisa = Number(pinData[key].jumlah) - angsTotal;
-      const status = sisa<=0?"Lunas":"Belum Lunas";
+      const status = sisa <= 0 ? "Lunas" : "Belum Lunas";
+      const statusColor = sisa <= 0 ? "green" : "red";
+
       const cls = sisa<=0?"lunas":"belum";
 
       const card = document.createElement("div");
       card.className=`card ${cls}`;
       card.innerHTML=`
         <h3>${pinData[key].nama}</h3>
-        <p><b>Tanggal Pinjaman:</b> ${pinData[key].tanggal}</p>
-        <p><b>Jumlah Pinjaman:</b> Rp ${formatRp(pinData[key].jumlah)}</p>
-        <p><b>Angsuran:</b> Rp ${formatRp(angsTotal)}</p>
+        <b>Tanggal Pinjaman:</b> ${pinData[key].tanggal}</p>
+        <b>Jumlah Pinjaman:</b> Rp ${formatRp(pinData[key].jumlah)}</p>
+        <p><b>Angsuran (${sumberFilter}):</b> Rp ${formatRp(angsTotal)}</p>
         <p><b>Sisa:</b> Rp ${formatRp(sisa)}</p>
-        <p><b>Status:</b> <b>${status}</b></p>
+        <p><b>Status:</b> <b style="color:${statusColor}">${status}</b></p>
         <p><b>Tanggal Terakhir Angsuran:</b> ${tglTerakhir}</p>
         <p><b>Keterangan:</b> ${pinData[key].keterangan || '-'}</p>
       `;
@@ -197,7 +215,8 @@ window.tampilkanLaporan = async function(){
         sisa,
         status,
         tglTerakhir,
-        pinData[key].keterangan || '-'
+        pinData[key].keterangan || '-',
+        sumberFilter
       ]);
     }
   }
@@ -206,29 +225,19 @@ window.tampilkanLaporan = async function(){
   document.getElementById("totalAngsuran").innerText=formatRp(totalAngsuran);
   window.pdfData=pdfData;
 }
-
 /* PDF */
 window.downloadPDF = function(){
-  if(!window.pdfData || !window.pdfData.length){
-    alert("Belum ada data");
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text("Laporan Pinjaman & Angsuran",105,20,{align:"center"});
-
-  const tableColumn = ["Nama","Tgl Pinjaman","Jumlah","Angsuran","Sisa","Status","Tgl Terakhir Angsuran","Keterangan"];
-  doc.autoTable({
-    head:[tableColumn],
-    body: window.pdfData.map(r=>[
-      r[0], r[1], "Rp "+r[2].toLocaleString("id-ID"),
-      "Rp "+r[3].toLocaleString("id-ID"),
-      "Rp "+r[4].toLocaleString("id-ID"),
-      r[5], r[6], r[7]
-    ]),
-    startY:30
-  });
+  const tableColumn = ["Nama","Tgl Pinjaman","Jumlah","Angsuran","Sisa","Status","Tgl Terakhir Angsuran","Keterangan","Sumber"];
+doc.autoTable({
+  head:[tableColumn],
+  body: window.pdfData.map(r=>[
+    r[0], r[1], "Rp "+r[2].toLocaleString("id-ID"),
+    "Rp "+r[3].toLocaleString("id-ID"),
+    "Rp "+r[4].toLocaleString("id-ID"),
+    r[5], r[6], r[7], r[8]
+  ]),
+  startY:30
+});
 
   doc.save(`laporan_angsuran_${new Date().toLocaleDateString().replace(/\//g,"-")}.pdf`);
 }
@@ -236,13 +245,15 @@ window.downloadPDF = function(){
 window.kembali=function(){
   window.location.href="dashboard.html";
 }
-  /* TAMBAH ANGSURAN */
+
+/* TAMBAH ANGSURAN */
 window.tambahAngsuran = async function(){
 
   const select = document.getElementById("pinjamanSelect");
   const pinjamanId = select.value;
   const jumlah = Number(document.getElementById("jumlahAngsuran").value);
   const ket = document.getElementById("ketAngsuran").value;
+  const sumber = document.getElementById("sumberAngsuran")?.value || "cash"; // Cash/Bank
 
   if(!pinjamanId){
     alert("Pilih pinjaman dulu");
@@ -286,12 +297,6 @@ window.tambahAngsuran = async function(){
     alert("Angsuran melebihi sisa pinjaman!");
     return;
   }
-    
-  if(jumlah>sisa){
-    document.getElementById("notif").innerHTML=
-      "<div class='warning'>Saldo tidak cukup!</div>";
-    return;
-  }
 
   // Simpan angsuran
   await push(angsuranRef,{
@@ -299,17 +304,19 @@ window.tambahAngsuran = async function(){
     nama: pinjaman.nama,
     jumlah: jumlah,
     tanggal: new Date().toLocaleString(),
-    keterangan: ket
+    keterangan: ket,
+    sumber: sumber
   });
 
-  // Tambahkan ke kas (masuk)
+  // Tambahkan ke kas (masuk) sesuai sumber
   await push(kasRef,{
     sumber: `Angsuran - ${pinjaman.nama}`,
     jumlah: jumlah,
-    tanggal: new Date().toLocaleString()
+    tanggal: new Date().toLocaleString(),
+    sumberKas: sumber
   });
 
-  alert("Angsuran berhasil disimpan!");
+  alert(`Angsuran berhasil disimpan ke ${sumber.toUpperCase()}!`);
 
   // Reset form
   document.getElementById("jumlahAngsuran").value="";

@@ -70,24 +70,26 @@ button:hover{
   <img src="img/icon-192.png">
   <h3>Sistem Koperasi Arfa</h3>
 
-  <button onclick="login('admin')">
-    Masuk sebagai Admin
-  </button>
-
-  <button onclick="login('user')">
-    Masuk sebagai User
-  </button>
-</div>
-
-<div class="footer">
-  © 2026 Koperasi Driver Arfa
+  <button onclick="login('admin')">Masuk sebagai Admin</button>
+  <button onclick="login('user')">Masuk sebagai User</button>
 </div>
 
 <script>
+const codes = {
+  admin: "ali26",
+  user: "user26"
+};
+
 function login(role){
-  localStorage.setItem("role", role);
-  localStorage.setItem("user", role);
-  window.location.href = "dashboard.html";
+  const code = prompt(`Masukkan kode untuk ${role}:`);
+  if(code === codes[role]){
+    localStorage.setItem("role", role);
+    localStorage.setItem("user", role);
+    localStorage.setItem("sessionCode", code); // Simpan session
+    window.location.href = "dashboard.html";
+  } else {
+    alert("Kode salah! Akses ditolak.");
+  }
 }
 </script>
 

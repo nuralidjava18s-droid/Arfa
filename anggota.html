@@ -99,10 +99,10 @@ th{
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, onValue, remove } 
+import { getDatabase, ref, push, onValue, remove, get } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
   databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
@@ -111,18 +111,35 @@ from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
   messagingSenderId: "468058520812",
   appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
 };
-  
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* Proteksi login */
 if(!localStorage.getItem("user")){
   window.location.href = "index.html";
 }
 
 const anggotaRef = ref(db,"koperasi/anggota");
 
-/* Ambil data realtime */
+/* ================= AUTO ID ================= */
+async function generateId(){
+  const snapshot = await get(anggotaRef);
+
+  if(!snapshot.exists()) return "AG001";
+
+  const data = snapshot.val();
+  let max = 0;
+
+  for(const key in data){
+    if(data[key].id){
+      const nomor = parseInt(data[key].id.replace("AG",""));
+      if(nomor > max) max = nomor;
+    }
+  }
+
+  return "AG" + (max+1).toString().padStart(3,"0");
+}
+/* ================= TAMPIL DATA ================= */
 onValue(anggotaRef,(snapshot)=>{
   const tbody = document.getElementById("listAnggota");
   tbody.innerHTML = "";
@@ -133,6 +150,7 @@ onValue(anggotaRef,(snapshot)=>{
     for(const key in data){
       tbody.innerHTML += `
         <tr>
+          <td>${data[key].id || "-"}</td>
           <td>${data[key].nama}</td>
           <td>${data[key].alamat}</td>
           <td>${data[key].telepon}</td>
@@ -145,8 +163,8 @@ onValue(anggotaRef,(snapshot)=>{
   }
 });
 
-/* Tambah anggota */
-window.tambahAnggota = function(){
+/* ================= TAMBAH ================= */
+window.tambahAnggota = async function(){
 
   const nama = document.getElementById("nama").value;
   const alamat = document.getElementById("alamat").value;
@@ -154,7 +172,10 @@ window.tambahAnggota = function(){
 
   if(!nama) return alert("Nama wajib diisi");
 
+  const idBaru = await generateId();
+
   push(anggotaRef,{
+    id:idBaru,
     nama:nama,
     alamat:alamat,
     telepon:telepon
@@ -165,18 +186,19 @@ window.tambahAnggota = function(){
   document.getElementById("telepon").value="";
 }
 
-/* Hapus anggota */
+/* ================= HAPUS ================= */
 window.hapusAnggota = function(id){
   if(confirm("Yakin hapus?")){
     remove(ref(db,"koperasi/anggota/"+id));
   }
 }
 
-/* Kembali */
+/* ================= KEMBALI ================= */
 window.kembali = function(){
   window.location.href="dashboard.html";
 }
 </script>
+ 
 
 </body>
 </html>

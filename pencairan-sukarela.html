@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pencairan Simpanan Sukarela</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body{
+  font-family:Arial,sans-serif;
+  margin:0;
+  background:#f4f6f9;
+}
+
+header{
+  background:#1e90ff;
+  color:white;
+  padding:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:13px;
+}
+
+.container{padding:14px;}
+
+.card{
+  background:white;
+  padding:14px;
+  margin-bottom:14px;
+  border-radius:8px;
+  box-shadow:0 3px 10px rgba(0,0,0,.1);
+}
+
+input,select{
+  padding:8px;
+  margin-bottom:10px;
+  width:100%;
+  border-radius:6px;
+  border:1px solid #ccc;
+}
+
+button{
+  padding:8px 10px;
+  font-size:13px;
+  border:none;
+  border-radius:6px;
+  background:#1e90ff;
+  color:white;
+  cursor:pointer;
+}
+
+button:disabled{
+  background:#aaa;
+  cursor:not-allowed;
+}
+
+.transaksi{
+  border:1px solid #eee;
+  border-radius:8px;
+  padding:10px;
+  margin-bottom:10px;
+  background:#fafafa;
+  font-size:13px;
+}
+
+.success{color:green;font-size:12px;}
+.warning{color:red;font-size:12px;}
+.adminOnly{display:none;}
+
+.jumlah-masuk{color:green;font-weight:bold;}
+.jumlah-keluar{color:red;font-weight:bold;}
+
+</style>
+</head>
+
+<body>
+
+<header>
+  <div>📄 Pencairan Simpanan Sukarela</div>
+  <div>
+    <button onclick="window.location='dashboard.html'">Kembali</button>
+    <button onclick="exportPDF()">Export PDF</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <label>Pilih Anggota</label>
+    <select id="anggotaSelect"></select>
+
+    <div style="margin-top:8px">
+      Saldo Sukarela :
+      <strong>Rp <span id="saldo">0</span></strong>
+    </div>
+  </div>
+
+  <div class="card adminOnly">
+    <h4>Form Pencairan (Admin)</h4>
+    <input type="number" id="jumlah" placeholder="Jumlah Pencairan">
+    <input type="text" id="keterangan" placeholder="Keterangan">
+    <button onclick="cairkan()">Cairkan</button>
+    <div id="notif"></div>
+  </div>
+
+  <div class="card">
+    <h4>Riwayat Simpanan Sukarela</h4>
+    <div id="riwayat"></div>
+  </div>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "ISI_API_KEY_KAMU",
+  authDomain: "ISI_AUTH_DOMAIN",
+  databaseURL: "ISI_DATABASE_URL",
+  projectId: "ISI_PROJECT_ID",
+  storageBucket: "ISI_STORAGE",
+  messagingSenderId: "ISI_SENDER_ID",
+  appId: "ISI_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const role = localStorage.getItem("role");
+if(role==="admin"){
+  document.querySelector(".adminOnly").style.display="block";
+}
+
+const anggotaRef = ref(db,"koperasi/anggota");
+const simpananRef = ref(db,"koperasi/simpanan");
+const kasRef = ref(db,"koperasi/kas");
+
+let anggotaData = {};
+let simpananData = [];
+
+onValue(anggotaRef,(snap)=>{
+  anggotaData = snap.val() || {};
+  loadDropdown();
+});
+
+onValue(simpananRef,(snap)=>{
+  simpananData=[];
+  snap.forEach(child=>{
+    simpananData.push(child.val());
+  });
+  updateView();
+});
+
+function loadDropdown(){
+  const select=document.getElementById("anggotaSelect");
+  select.innerHTML="<option value=''>-- Pilih Anggota --</option>";
+  for(let id in anggotaData){
+    select.innerHTML+=`<option value="${id}">
+      ${anggotaData[id].nama}
+    </option>`;
+  }
+}
+
+document.getElementById("anggotaSelect")
+.addEventListener("change",updateView);
+function updateView(){
+  const id = document.getElementById("anggotaSelect").value;
+  if(!id){
+    document.getElementById("riwayat").innerHTML = "";
+    document.getElementById("saldo").innerText = "0";
+    return;
+  }
+
+  let saldo = 0;
+  let content = "";
+
+  simpananData.forEach(d=>{
+    if(d.anggotaId===id && d.jenis==="sukarela"){
+
+      saldo += Number(d.jumlah);
+
+      const tipe = Number(d.jumlah) > 0 ? "Setoran" : "Pencairan";
+      const warna = Number(d.jumlah) > 0 ? "green" : "red";
+
+      content += `
+        <div style="
+          border:1px solid #eee;
+          border-radius:8px;
+          padding:10px;
+          margin-bottom:10px;
+          background:#fafafa;
+        ">
+          <div><b>Tanggal</b> : ${d.tanggal || "-"}</div>
+          <div><b>Keterangan</b> : ${d.keterangan || "-"}</div>
+          <div><b>Jenis</b> : ${tipe}</div>
+          <div>
+            <b>Jumlah</b> : 
+            <span style="color:${warna};font-weight:bold">
+              Rp ${Math.abs(Number(d.jumlah)).toLocaleString("id-ID")}
+            </span>
+          </div>
+        </div>
+      `;
+    }
+  });
+
+  document.getElementById("saldo").innerText =
+    saldo.toLocaleString("id-ID");
+
+  document.getElementById("riwayat").innerHTML =
+    content || "<div style='text-align:center;color:#888'>Belum ada transaksi</div>";
+}
+window.cairkan=async function(){
+
+  if(role!=="admin"){
+    alert("Hanya admin yang bisa mencairkan!");
+    return;
+  }
+
+  const id=document.getElementById("anggotaSelect").value;
+  if(!id) return alert("Pilih anggota dulu");
+
+  const jumlah=parseInt(document.getElementById("jumlah").value);
+  const ket=document.getElementById("keterangan").value||"Pencairan";
+
+  let saldo=0;
+  simpananData.forEach(d=>{
+    if(d.anggotaId===id && d.jenis==="sukarela"){
+      saldo+=Number(d.jumlah);
+    }
+  });
+
+  if(jumlah>saldo){
+    document.getElementById("notif").innerHTML=
+      "<div class='warning'>Saldo tidak cukup!</div>";
+    return;
+  }
+
+  await push(simpananRef,{
+    anggotaId:id,
+    nama:anggotaData[id].nama,
+    jenis:"sukarela",
+    jumlah:-jumlah,
+    tanggal:new Date().toLocaleString(),
+    keterangan:ket
+  });
+
+  await push(kasRef,{
+    sumber:`Pencairan Sukarela - ${anggotaData[id].nama}`,
+    jumlah:-jumlah,
+    tanggal:new Date().toLocaleString()
+  });
+
+  document.getElementById("notif")
+    .innerHTML="<div class='success'>Berhasil dicairkan</div>";
+
+  document.getElementById("jumlah").value="";
+  document.getElementById("keterangan").value="";
+};
+
+window.exportPDF=function(){
+  const id=document.getElementById("anggotaSelect").value;
+  if(!id) return alert("Pilih anggota dulu");
+
+  const { jsPDF } = window.jspdf;
+  const doc=new jsPDF();
+
+  const nama=anggotaData[id].nama;
+
+  doc.setFontSize(14);
+  doc.text("Slip Pencairan Simpanan Sukarela",105,20,{align:"center"});
+
+  doc.setFontSize(11);
+  doc.text("Nama : "+nama,20,40);
+  doc.text("Tanggal Cetak : "+
+    new Date().toLocaleDateString("id-ID"),20,50);
+
+  doc.save("Slip_"+nama+".pdf");
+};
+
+</script>
+</body>
+</html>

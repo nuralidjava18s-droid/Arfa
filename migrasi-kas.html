@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Migrasi Kas Lama</title>
+</head>
+<body>
+<h2>Proses Migrasi Data Lama...</h2>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get, update } 
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
+  authDomain: "arfa-c7dee.firebaseapp.com",
+  databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
+  projectId: "arfa-c7dee",
+  storageBucket: "arfa-c7dee.firebasestorage.app",
+  messagingSenderId: "468058520812",
+  appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const kasRef = ref(db,"koperasi/kas");
+
+/* ================= MIGRASI ================= */
+async function migrasi(){
+
+  const snapshot = await get(kasRef);
+
+  if(!snapshot.exists()){
+    alert("Tidak ada data kas.");
+    return;
+  }
+
+  let totalUpdate = 0;
+
+  snapshot.forEach(child=>{
+    const data = child.val();
+
+    // hanya update data lama (yang belum ada tipe atau sumberKas)
+    if(!data.tipe || !data.sumberKas){
+
+      update(ref(db,"koperasi/kas/"+child.key),{
+        tipe:"masuk",
+        sumberKas:"cash",
+        kategori:"lama"
+      });
+
+      totalUpdate++;
+    }
+  });
+
+  alert("Migrasi selesai ✅ Total data diperbaiki: " + totalUpdate);
+}
+
+migrasi();
+</script>
+
+</body>
+</html>

@@ -3,64 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laporan Kas Koperasi</title>
+<title>Laporan Kas PRO</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#f4f6f9;font-size:13px;}
-header{background:#1e90ff;color:white;padding:12px;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
+header{background:#1e90ff;color:white;padding:12px;display:flex;justify-content:space-between;align-items:center;}
 .container{padding:15px;}
 .card{background:white;padding:12px;margin-bottom:12px;border-radius:10px;box-shadow:0 3px 8px rgba(0,0,0,.08);}
-button{padding:6px 8px;font-size:12px;border:none;border-radius:6px;background:#1e90ff;color:white;cursor:pointer;}
+button{padding:6px 8px;border:none;border-radius:6px;background:#1e90ff;color:white;cursor:pointer;}
+select{padding:6px;margin-right:5px;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th,td{border:1px solid #eee;padding:6px;text-align:center;}
 th{background:#f1f1f1;}
 .masuk{color:green;font-weight:bold;}
 .keluar{color:red;font-weight:bold;}
+.saldo{font-weight:bold;}
+.laporan-title{text-align:center;margin:5px 0 10px 0;font-weight:bold;font-size:14px;}
 </style>
 </head>
 <body>
 
 <header>
-  <div>💰 Laporan Kas Koperasi</div>
+  <div>💰 Laporan Kas PRO</div>
   <div>
     <button onclick="window.location='dashboard.html'">🔙 Kembali</button>
-    <button onclick="downloadPDF()">📄 Download PDF</button>
+    <button onclick="downloadPDF()">📄 PDF</button>
   </div>
 </header>
-  <div style="text-align:center;margin-bottom:10px;">
-  <h2 style="margin:0;">Koperasi Driver Khalifa</h2>
-  <div id="tanggalHariIni" style="font-size:13px;"></div>
-</div>
 
 <div class="container">
 
-  <!-- TABEL -->
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Tanggal</th>
-          <th>Keterangan</th>
-          <th>Masuk</th>
-          <th>Keluar</th>
-        </tr>
-      </thead>
-      <tbody id="laporanKas"></tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2">Total</td>
-          <td id="totalMasuk"></td>
-          <td id="totalKeluar"></td>
-        </tr>
-        <tr>
-          <td colspan="4" id="totalSaldo" style="text-align:right;font-weight:bold;"></td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+<div class="card">
+  <select id="filterBulan"></select>
+  <select id="filterTahun"></select>
+  <select id="filterSumber">
+    <option value="semua">Semua</option>
+    <option value="cash">Cash</option>
+    <option value="bank">Bank</option>
+  </select>
+  <button onclick="tampilkanTabel()">Tampilkan</button>
+</div>
+
+<div class="card">
+  <div id="laporanJudul" class="laporan-title">Laporan Kas: Semua</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Keterangan</th>
+        <th>Masuk</th>
+        <th>Keluar</th>
+        <th>Saldo</th>
+        <th>Sumber</th>
+      </tr>
+    </thead>
+    <tbody id="laporanKas"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">TOTAL</td>
+        <td id="totalMasuk"></td>
+        <td id="totalKeluar"></td>
+        <td id="totalSaldo"></td>
+        <td>-</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
 
 </div>
 
@@ -72,50 +83,60 @@ const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
   databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
-  projectId: "arfa-c7dee",
-  storageBucket: "arfa-c7dee.firebasestorage.app",
-  messagingSenderId: "468058520812",
-  appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
+  projectId: "arfa-c7dee"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-if(!localStorage.getItem("user")) window.location.href="index.html";
-
 const kasRef = ref(db,"koperasi/kas");
 
-let laporanData = [];
+let laporanData=[];
 
-  function tampilkanTanggal(){
-  const today = new Date();
+/* ================= FILTER SETUP ================= */
+const bulanSelect = document.getElementById("filterBulan");
+const tahunSelect = document.getElementById("filterTahun");
+const bulanList = ["Januari","Februari","Maret","April","Mei","Juni",
+"Juli","Agustus","September","Oktober","November","Desember"];
 
-  const opsi = {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  };
+bulanList.forEach((b,i)=>{
+  bulanSelect.innerHTML += `<option value="${i}">${b}</option>`;
+});
 
-  const tanggalFormat = today.toLocaleDateString("id-ID", opsi);
-
-  document.getElementById("tanggalHariIni").innerText =
-    "Tanggal: " + tanggalFormat;
+const tahunSekarang = new Date().getFullYear();
+for(let t=tahunSekarang-5; t<=tahunSekarang+1; t++){
+  tahunSelect.innerHTML += `<option value="${t}">${t}</option>`;
 }
-// Ambil data kas
+
+bulanSelect.value = new Date().getMonth();
+tahunSelect.value = tahunSekarang;
+
+/* ================= AMBIL DATA ================= */
 async function ambilData(){
   laporanData = [];
-  const kasSnap = await get(kasRef);
+  const snap = await get(kasRef);
 
-  if(kasSnap.exists()){
-    const data = kasSnap.val();
-    for(const key in data){
-      const item = data[key];
+  if(snap.exists()){
+    const data = snap.val();
+
+    for(const k in data){
+      const item = data[k];
+      const jumlah = Number(item.jumlah) || 0;
+      const tipe = item.tipe || "masuk";
+
+      let dateObj;
+      if(typeof item.tanggal === "number"){
+        dateObj = new Date(item.tanggal);
+      } else {
+        const d = new Date(item.tanggal);
+        dateObj = isNaN(d) ? new Date() : d;
+      }
 
       laporanData.push({
-        tanggal: item.tanggal,
+        tanggal: dateObj,
         keterangan: item.keterangan || item.sumber || "-",
-        masuk: Number(item.jumlah) > 0 ? Number(item.jumlah) : 0,
-        keluar: Number(item.jumlah) < 0 ? Math.abs(Number(item.jumlah)) : 0
+        sumber: item.sumberKas || "cash",
+        masuk: tipe==="masuk"?jumlah:0,
+        keluar: tipe==="keluar"?jumlah:0
       });
     }
   }
@@ -123,107 +144,110 @@ async function ambilData(){
   tampilkanTabel();
 }
 
-function tampilkanTabel(){
+/* ================= TAMPILKAN ================= */
+window.tampilkanTabel = function(){
+  const bulan = Number(bulanSelect.value);
+  const tahun = Number(tahunSelect.value);
+  const sumberFilter = document.getElementById("filterSumber").value;
   const tbody = document.getElementById("laporanKas");
-
   tbody.innerHTML = "";
-  let totalMasuk = 0;
-  let totalKeluar = 0;
 
-  laporanData
-  .sort((a,b)=>{
-    const [da,ma,ya] = a.tanggal.split("/");
-    const [db,mb,yb] = b.tanggal.split("/");
-    return new Date(ya,ma-1,da) - new Date(yb,mb-1,db);
-  })
-  .forEach(item=>{
-    totalMasuk += item.masuk;
-    totalKeluar += item.keluar;
+  let totalMasuk=0, totalKeluar=0, saldo=0;
+
+  const dataFilter = laporanData
+    .filter(i => 
+      i.tanggal.getMonth() <= bulan && 
+      i.tanggal.getFullYear() === tahun &&
+      (sumberFilter === "semua" || i.sumber === sumberFilter)
+    )
+    .sort((a,b)=>a.tanggal - b.tanggal);
+
+  dataFilter.forEach(i=>{
+    saldo += i.masuk;
+    saldo -= i.keluar;
+    totalMasuk += i.masuk;
+    totalKeluar += i.keluar;
 
     tbody.innerHTML += `
       <tr>
-        <td>${item.tanggal}</td>
-        <td>${item.keterangan}</td>
-        <td class="masuk">${item.masuk ? "Rp "+item.masuk.toLocaleString("id-ID") : "-"}</td>
-        <td class="keluar">${item.keluar ? "Rp "+item.keluar.toLocaleString("id-ID") : "-"}</td>
+        <td>${i.tanggal.toLocaleDateString("id-ID")}</td>
+        <td>${i.keterangan}</td>
+        <td class="masuk">${i.masuk? "Rp "+i.masuk.toLocaleString("id-ID"):"-"}</td>
+        <td class="keluar">${i.keluar? "Rp "+i.keluar.toLocaleString("id-ID"):"-"}</td>
+        <td class="saldo">Rp ${saldo.toLocaleString("id-ID")}</td>
+        <td>${i.sumber.toUpperCase()}</td>
       </tr>
     `;
   });
 
-  document.getElementById("totalMasuk").innerText = "Rp "+totalMasuk.toLocaleString("id-ID");
-  document.getElementById("totalKeluar").innerText = "Rp "+totalKeluar.toLocaleString("id-ID");
-  document.getElementById("totalSaldo").innerText =
-    "Saldo: Rp "+(totalMasuk-totalKeluar).toLocaleString("id-ID");
-}
+  document.getElementById("totalMasuk").innerText="Rp "+totalMasuk.toLocaleString("id-ID");
+  document.getElementById("totalKeluar").innerText="Rp "+totalKeluar.toLocaleString("id-ID");
+  document.getElementById("totalSaldo").innerText="Rp "+saldo.toLocaleString("id-ID");
 
-function downloadPDF(){
+  document.getElementById("laporanJudul").innerText = 
+    `Laporan Kas: ${sumberFilter==="semua" ? "Semua" : sumberFilter.toUpperCase()}`;
+};
+
+/* ================= PDF ================= */
+window.downloadPDF = function(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
-  const tanggalCetak = new Date().toLocaleDateString("id-ID",{
-    day:"2-digit",
-    month:"long",
-    year:"numeric"
-  });
+  const sumberFilter = document.getElementById("filterSumber").value;
+  const bulan = Number(bulanSelect.value);
+  const tahun = Number(tahunSelect.value);
+  const judulText = sumberFilter==="semua" ? "Semua" : sumberFilter.toUpperCase();
 
-  // Judul
   doc.setFontSize(14);
-  doc.text("KOPERASI DRIVER KHALIFA", 105, 15, { align: "center" });
-
+  doc.text("LAPORAN KAS KOPERASI",105,15,{align:"center"});
   doc.setFontSize(12);
-  doc.text("LAPORAN KAS", 105, 22, { align: "center" });
+  doc.text(`Filter: ${judulText} - ${bulanList[bulan]} ${tahun}`,105,22,{align:"center"});
 
-  doc.setFontSize(10);
-  doc.text("Tanggal Cetak: " + tanggalCetak, 14, 30);
+  let rows=[], totalMasuk=0, totalKeluar=0, saldo=0;
 
-  // Hitung total
-  let totalMasuk = 0;
-  let totalKeluar = 0;
+  laporanData
+    .filter(i => 
+      i.tanggal.getMonth() <= bulan && 
+      i.tanggal.getFullYear() === tahun &&
+      (sumberFilter === "semua" || i.sumber === sumberFilter)
+    )
+    .sort((a,b)=>a.tanggal - b.tanggal)
+    .forEach(i=>{
+      saldo += i.masuk;
+      saldo -= i.keluar;
+      totalMasuk += i.masuk;
+      totalKeluar += i.keluar;
 
-  laporanData.forEach(item=>{
-    totalMasuk += item.masuk;
-    totalKeluar += item.keluar;
-  });
-
-  // Isi tabel
-  const tableRows = laporanData.map(item=>[
-    item.tanggal,
-    item.keterangan,
-    item.masuk ? "Rp "+item.masuk.toLocaleString("id-ID") : "-",
-    item.keluar ? "Rp "+item.keluar.toLocaleString("id-ID") : "-"
-  ]);
+      rows.push([
+        i.tanggal.toLocaleDateString("id-ID"),
+        i.keterangan,
+        i.masuk ? "Rp "+i.masuk.toLocaleString("id-ID") : "",
+        i.keluar ? "Rp "+i.keluar.toLocaleString("id-ID") : "",
+        "Rp "+saldo.toLocaleString("id-ID"),
+        i.sumber.toUpperCase()
+      ]);
+    });
 
   doc.autoTable({
-    head:[["Tanggal","Keterangan","Masuk","Keluar"]],
-    body:tableRows,
-    startY:35,
-    styles:{ fontSize:9 },
-    headStyles:{ fillColor:[30,144,255] },
-    columnStyles:{
-      2:{ halign:"right" },
-      3:{ halign:"right" }
-    }
+    head:[["Tanggal","Keterangan","Masuk","Keluar","Saldo","Sumber"]],
+    body: rows,
+    startY:30,
+    styles:{fontSize:8},
+    headStyles:{fillColor:[30,144,255]},
+    columnStyles:{2:{halign:"right"},3:{halign:"right"},4:{halign:"right"}}
   });
 
-  // Total di bawah tabel
-  let finalY = doc.lastAutoTable.finalY + 10;
-
+  const finalY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(10);
-  doc.text("Total Masuk : Rp "+totalMasuk.toLocaleString("id-ID"), 14, finalY);
-  doc.text("Total Keluar : Rp "+totalKeluar.toLocaleString("id-ID"), 14, finalY+6);
-
+  doc.text("Total Masuk : Rp "+totalMasuk.toLocaleString("id-ID"),14,finalY);
+  doc.text("Total Keluar : Rp "+totalKeluar.toLocaleString("id-ID"),14,finalY+6);
   doc.setFontSize(11);
-  doc.text(
-    "Saldo Akhir : Rp "+(totalMasuk-totalKeluar).toLocaleString("id-ID"),
-    14,
-    finalY+14
-  );
+  doc.text("Saldo Akhir : Rp "+saldo.toLocaleString("id-ID"),14,finalY+14);
 
-  doc.save("Laporan_Kas_Koperasi.pdf");
-}
+  doc.save("Laporan_Kas_PRO.pdf");
+};
+
 ambilData();
-  tampilkanTanggal();
-  window.downloadPDF = downloadPDF;
 </script>
 
 </body>

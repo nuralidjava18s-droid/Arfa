@@ -7,41 +7,33 @@
 
 <style>
 body{font-family:Arial,sans-serif;margin:0;background:#f4f6f9;}
-header{
-  background:#1e90ff;color:white;padding:15px;
-  display:flex;justify-content:space-between;align-items:center;
-}
-.container{padding:20px;}
-.card{
-  background:white;padding:15px;margin-bottom:15px;
-  border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.1);
-}
+header{background:#1e90ff;color:white;padding:12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+.container{padding:14px;}
+.card{background:white;padding:14px;margin-bottom:14px;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.1);}
 input,select{padding:8px;margin-bottom:10px;width:100%;border-radius:6px;border:1px solid #ccc;}
-button{padding:8px 12px;cursor:pointer;background:#1e90ff;border:none;color:white;border-radius:6px;margin-top:5px;}
 button:disabled{background:#aaa;cursor:not-allowed;}
+button{padding:6px 8px;font-size:12px;border:none;border-radius:6px;background:#1e90ff;color:white;cursor:pointer;}
 .total{font-size:18px;font-weight:bold;margin-bottom:10px;}
 .anggota-card{background:#fff;border-left:5px solid #1e90ff;margin-bottom:15px;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
 .anggota-card-row{display:flex;justify-content:space-between;margin-bottom:6px;}
 .anggota-card-row span:first-child{font-weight:bold;color:#333;}
-.transaksi{margin-left:15px;margin-top:5px;padding-left:5px;border-left:2px solid #ccc;}
-.transaksi div{display:flex;justify-content:space-between;margin-bottom:3px;font-size:14px;}
+.transaksi{margin-left:10px;margin-top:5px;padding-left:5px;border-left:2px solid #ccc;}
+.transaksi div{display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px;}
 .transaksi div span:first-child{font-weight:bold;}
 .transaksi-item{
   display:grid;
-  grid-template-columns: 1fr 1fr 1.5fr;
-  font-size:13px;
+  grid-template-columns: 1fr 1fr 1.5fr 1fr;
+  font-size:10px;
   padding:4px 0;
   border-bottom:1px dashed #ddd;
 }
-
 .transaksi-item span:nth-child(2){
   color:red;
   font-weight:bold;
   text-align:right;
 }
-  </style>
+</style>
 
-<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
@@ -49,7 +41,7 @@ button:disabled{background:#aaa;cursor:not-allowed;}
 <body>
 
 <header>
-  <div>📄Pinjaman</div>
+  <div>📄 Pinjaman</div>
   <div>
     <button onclick="kembali()">Kembali</button>
     <button id="btnPDF">Export PDF</button>
@@ -60,10 +52,14 @@ button:disabled{background:#aaa;cursor:not-allowed;}
 
   <!-- Form Pencairan Pinjaman -->
   <div class="card" id="formPinjaman">
-    <h3>Cairkan Pinjaman</h3>
+    <h3>Form Pinjaman</h3>
     <select id="anggotaPinjamanSelect"></select>
     <input type="number" id="jumlahPinjaman" placeholder="Jumlah Pinjaman">
     <input type="text" id="ketPinjaman" placeholder="Keterangan">
+    <select id="sumberPinjaman">
+      <option value="cash">Cash</option>
+      <option value="bank">Bank</option>
+    </select>
     <button id="btnPinjaman">Cairkan Pinjaman</button>
   </div>
 
@@ -127,7 +123,12 @@ async function loadPinjaman(){
       const item = child.val();
       if(!rekap[item.nama]) rekap[item.nama]={jumlah:0,transaksi:[]};
       rekap[item.nama].jumlah += Number(item.jumlah);
-      rekap[item.nama].transaksi.push({jumlah:Number(item.jumlah),keterangan:item.keterangan,tanggal:item.tanggal||"-"});
+      rekap[item.nama].transaksi.push({
+        jumlah:Number(item.jumlah),
+        keterangan:item.keterangan,
+        tanggal:item.tanggal||"-",
+        sumber:item.sumber || "cash"
+      });
     });
   }
   anggotaData = rekap;
@@ -144,7 +145,6 @@ async function loadPinjaman(){
 
   <div class="anggota-card-row">
     <span>Total Pinjaman:</span>
-    <p></p>
     <span>Rp ${rekap[nama].jumlah.toLocaleString("id-ID")}</span>
   </div>
 
@@ -154,9 +154,11 @@ async function loadPinjaman(){
 
 rekap[nama].transaksi.forEach(t=>{
   html += `
-    <div class="transaksi-item">${formatTanggal(t.tanggal)}</span>
+    <div class="transaksi-item">
+      <span>${formatTanggal(t.tanggal)}</span>
       <span>Rp ${t.jumlah.toLocaleString("id-ID")}</span>
-      <span>${t.keterangan || "-"}</span>
+      <span>${t.keterangan || "-"} [${t.sumber || "cash"}]</span>
+      <span>${t.sumber === "cash" ? "Keluar" : "Keluar"}</span>
     </div>
   `;
 });
@@ -169,7 +171,7 @@ html += `</div>`;
 }
 loadPinjaman();
 
-  function formatTanggal(tgl){
+function formatTanggal(tgl){
   const d = new Date(tgl);
   if(isNaN(d)) return tgl;
   return d.toLocaleDateString("id-ID",{
@@ -178,6 +180,7 @@ loadPinjaman();
     year:"numeric"
   });
 }
+
 /* Pencairan pinjaman - hanya admin */
 const btnPinjaman = document.getElementById("btnPinjaman");
 if(role!=="admin") btnPinjaman.disabled=true;
@@ -188,41 +191,53 @@ btnPinjaman.addEventListener("click", async ()=>{
   const nama = anggotaPinjamanSelect.options[anggotaPinjamanSelect.selectedIndex].text;
   const jumlah = Number(document.getElementById("jumlahPinjaman").value);
   const ket = document.getElementById("ketPinjaman").value;
+  const sumber = document.getElementById("sumberPinjaman").value; // cash/bank
   if(!jumlah || jumlah<=0) return alert("Jumlah pinjaman tidak valid");
 
+  // Push pinjaman
   await push(pinjamanRef,{
     anggotaId: anggotaId,
     nama: nama,
     jumlah: jumlah,
     keterangan: ket,
-    tanggal: new Date().toLocaleString()
+    tanggal: new Date().toLocaleString(),
+    sumber: sumber
   });
 
-  // Update kas
+  // Update kas sesuai sumber
   await push(kasRef,{
     sumber:`Pencairan Pinjaman - ${nama}`,
-    jumlah: -jumlah,
-    tanggal: new Date().toLocaleString()
+    jumlah: jumlah, // catat sebagai positif
+    tanggal: new Date().toLocaleString(),
+    sumberKas: sumber,
+    tipe: "keluar"
   });
 
   document.getElementById("jumlahPinjaman").value="";
   document.getElementById("ketPinjaman").value="";
-  alert("Pinjaman dicairkan!");
+  alert(`Pinjaman dicairkan ke ${sumber.toUpperCase()}!`);
   loadPinjaman();
 });
 
 /* Export PDF */
-document.getElementById("btnPDF").addEventListener("click", ()=>{
+document.getElementById("btnPDF").addEventListener("click", async ()=>{
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   doc.setFontSize(16);
   doc.text("Laporan Pinjaman Anggota",105,20,{align:"center"});
 
-  const tableColumn=["Anggota","Tanggal","Jumlah","Keterangan"];
+  const tableColumn=["Anggota","Tanggal","Jumlah","Keterangan","Sumber","Jenis"];
   const tableRows=[];
   for(const nama in anggotaData){
     anggotaData[nama].transaksi.forEach(t=>{
-      tableRows.push([nama,t.tanggal,"Rp "+t.jumlah.toLocaleString("id-ID"),t.keterangan]);
+      tableRows.push([
+        nama,
+        t.tanggal,
+        "Rp "+t.jumlah.toLocaleString("id-ID"),
+        t.keterangan,
+        t.sumber,
+        "Keluar"
+      ]);
     });
   }
 
