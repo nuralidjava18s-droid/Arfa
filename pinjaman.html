@@ -157,7 +157,7 @@ rekap[nama].transaksi.forEach(t=>{
     <div class="transaksi-item">
       <span>${formatTanggal(t.tanggal)}</span>
       <span>Rp ${t.jumlah.toLocaleString("id-ID")}</span>
-      <span>${t.keterangan || "-"} [${t.sumber || "cash"}]</span>
+      <span>${t.ket || "-"} [${t.sumber || "cash"}]</span>
       <span>${t.sumber === "cash" ? "Keluar" : "Keluar"}</span>
     </div>
   `;
