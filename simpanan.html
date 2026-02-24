@@ -37,6 +37,7 @@ button{
   cursor:pointer;
   color:white;
 }
+button:disabled{background:#aaa; cursor:not-allowed;}
 .btn-primary{background:#1e90ff;}
 .btn-edit{background:#ff9800;}
 .btn-delete{background:#e74c3c;}
@@ -81,7 +82,8 @@ button{
     Total Simpanan: Rp <span id="totalSimpanan">0</span>
   </div>
 
-  <div class="card">
+  <!-- FORM TAMBAH SIMPANAN -->
+  <div id="formSimpanan" class="card">
     <h3>Tambah Simpanan</h3>
     <select id="anggotaSelect"></select>
 
@@ -132,7 +134,15 @@ const anggotaRef = ref(db,"koperasi/anggota");
 const simpananRef = ref(db,"koperasi/simpanan");
 const kasRef = ref(db,"koperasi/kas");
 
-let simpananRaw=[];
+/* LOGIN & ROLE BASED */
+const username = localStorage.getItem("user");
+const role = localStorage.getItem("role") || "user"; // admin/user
+if(!username) window.location.href="index.html";
+
+// Hanya admin bisa tambah/edit/hapus
+if(role !== "admin"){
+  document.getElementById("formSimpanan").style.display="none";
+}
 
 /* LOAD ANGGOTA */
 onValue(anggotaRef, snapshot=>{
@@ -147,6 +157,7 @@ onValue(anggotaRef, snapshot=>{
 });
 
 /* LOAD SIMPANAN */
+let simpananRaw=[];
 onValue(simpananRef, snapshot=>{
   simpananRaw=[];
   snapshot.forEach(child=>{
@@ -193,8 +204,8 @@ function renderData(){
         <div class="detail-row">
           <span>${d.jenis} - Rp ${Number(d.jumlah).toLocaleString("id-ID")}</span>
           <span>
-            <button class="btn-edit" data-id="${d.id}">Edit</button>
-            <button class="btn-delete" data-id="${d.id}">Hapus</button>
+            <button class="btn-edit" data-id="${d.id}" ${role!=="admin"?"disabled":""}>Edit</button>
+            <button class="btn-delete" data-id="${d.id}" ${role!=="admin"?"disabled":""}>Hapus</button>
           </span>
         </div>
       `;
@@ -211,8 +222,9 @@ function renderData(){
   attachEvents();
 }
 
-/* EVENT EDIT & HAPUS */
+/* EVENT EDIT & HAPUS (Hanya admin) */
 function attachEvents(){
+  if(role!=="admin") return; // user biasa tidak bisa edit/hapus
 
   document.querySelectorAll(".btn-edit").forEach(btn=>{
     btn.onclick=async ()=>{
@@ -257,48 +269,53 @@ function attachEvents(){
       alert("Data dihapus");
     };
   });
-
 }
 
-/* SIMPAN */
-document.getElementById("btnSimpan").onclick=async()=>{
-  const select=document.getElementById("anggotaSelect");
-  if(!select.value) return alert("Pilih anggota");
+/* SIMPAN (Hanya admin) */
+const btnSimpan=document.getElementById("btnSimpan");
+if(role==="admin"){
+  btnSimpan.onclick=async()=>{
+    const select=document.getElementById("anggotaSelect");
+    if(!select.value) return alert("Pilih anggota");
 
-  const nama=select.options[select.selectedIndex].text;
-  const jenis=document.getElementById("jenis").value;
-  const jumlah=Number(document.getElementById("jumlah").value);
-  const ket=document.getElementById("keterangan").value;
-  const sumberKas=document.getElementById("sumberKas").value;
+    const nama=select.options[select.selectedIndex].text;
+    const jenis=document.getElementById("jenis").value;
+    const jumlah=Number(document.getElementById("jumlah").value);
+    const ket=document.getElementById("keterangan").value;
+    const sumberKas=document.getElementById("sumberKas").value;
 
-  if(!jumlah || jumlah<=0) return alert("Jumlah tidak valid");
+    if(!jumlah || jumlah<=0) return alert("Jumlah tidak valid");
 
-  // simpan kas dulu
-  const kasPush=await push(kasRef,{
-    tipe:"masuk",
-    kategori:"simpanan",
-    sumberKas:sumberKas,
-    keterangan:`Simpanan ${jenis} - ${nama}`,
-    jumlah:jumlah,
-    tanggal:new Date().toLocaleString()
-  });
+    // simpan kas dulu
+    const kasPush=await push(kasRef,{
+      tipe:"masuk",
+      kategori:"simpanan",
+      sumberKas:sumberKas,
+      keterangan:`Simpanan ${jenis} - ${nama}`,
+      jumlah:jumlah,
+      tanggal:new Date().toLocaleString()
+    });
 
-  const kasId=kasPush.key;
+    const kasId=kasPush.key;
 
-  // simpan simpanan
-  await push(simpananRef,{
-    anggotaId:select.value,
-    nama,
-    jenis,
-    jumlah,
-    keterangan:ket,
-    tanggal:new Date().toLocaleString(),
-    kasId:kasId
-  });
+    // simpan simpanan
+    await push(simpananRef,{
+      anggotaId:select.value,
+      nama,
+      jenis,
+      jumlah,
+      keterangan:ket,
+      tanggal:new Date().toLocaleString(),
+      kasId:kasId
+    });
 
-  document.getElementById("jumlah").value="";
-  document.getElementById("keterangan").value="";
-};
+    document.getElementById("jumlah").value="";
+    document.getElementById("keterangan").value="";
+  };
+} else {
+  btnSimpan.disabled=true;
+}
+
 </script>
 
 </body>
