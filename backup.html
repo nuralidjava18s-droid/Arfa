@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Restore Backup Lengkap</title>
+<title>Restore Backup Koperasi</title>
 <style>
 body{font-family:Arial;margin:0;background:#f4f6f9;}
 header{background:#1e90ff;color:white;padding:15px;display:flex;justify-content:space-between;align-items:center;}
@@ -19,19 +19,19 @@ h4{margin:5px 0;}
 <body>
 
 <header>
-  <div>Restore Backup Otomatis</div>
+  <div>Restore & Backup Koperasi</div>
   <button onclick="window.location='dashboard.html'">Kembali</button>
 </header>
 
 <div class="container">
 
   <div class="card">
-    <h3>Backup Otomatis</h3>
+    <h3>Backup Data</h3>
     <button id="btnBackup">Backup Sekarang</button>
   </div>
 
   <div class="card">
-    <h3>Restore Backup Lama</h3>
+    <h3>Restore Data</h3>
     <input type="file" id="fileRestore" accept=".json">
     <button id="btnRestore">Restore Otomatis</button>
   </div>
@@ -98,7 +98,7 @@ function loadLogs(){
 }
 loadLogs();
 
-// ===== BACKUP OTOMATIS =====
+// ===== BACKUP =====
 document.getElementById("btnBackup").addEventListener("click", async ()=>{
   const koperasiRef = ref(db,"koperasi");
   const snap = await get(koperasiRef);
@@ -115,15 +115,14 @@ document.getElementById("btnBackup").addEventListener("click", async ()=>{
   a.click();
   URL.revokeObjectURL(url);
 
-  // Notifikasi nama file
-  alert(`Backup selesai!\nNama file: ${fileName}\nFile tersimpan di folder Download default browser.`);
-
+  alert(`Backup selesai!\nFile tersimpan: ${fileName}`);
   addLog("Backup Data");
 });
-// ===== RESTORE OTOMATIS =====
+
+// ===== RESTORE =====
 document.getElementById("btnRestore").addEventListener("click", ()=>{
   const fileInput = document.getElementById("fileRestore");
-  if(!fileInput.files[0]) return alert("Pilih file backup JSON dulu!");
+  if(!fileInput.files[0]) return alert("Pilih file JSON dulu!");
   const file = fileInput.files[0];
   const reader = new FileReader();
 
@@ -136,8 +135,8 @@ document.getElementById("btnRestore").addEventListener("click", ()=>{
       const koperasiRef = ref(db,"koperasi");
       const snap = await get(koperasiRef);
       if(snap.exists()){
-        const dataOld = snap.val();
-        const blobOld = new Blob([JSON.stringify(dataOld,null,2)], {type:"application/json"});
+        const oldData = snap.val();
+        const blobOld = new Blob([JSON.stringify(oldData,null,2)], {type:"application/json"});
         const urlOld = URL.createObjectURL(blobOld);
         const aOld = document.createElement("a");
         aOld.href = urlOld;
@@ -147,54 +146,18 @@ document.getElementById("btnRestore").addEventListener("click", ()=>{
         addLog("Backup Sebelum Restore");
       }
 
-      // Mapping field lama → baru
-      const newData = {anggota:{}, pinjaman:{}, angsuran:{}, kas:{}};
+      // Pastikan struktur sesuai
+      const newData = {
+        anggota: json.anggota || {},
+        angsuran: json.angsuran || {},
+        kas: json.kas || {},
+        logs: json.logs || {},
+        pinjaman: json.pinjaman || {},
+        simpanan: json.simpanan || {}
+      };
 
-      if(json.anggota){
-        for(const k in json.anggota){
-          const a = json.anggota[k];
-          newData.anggota[k] = {nama:a.nama||"", saldo:Number(a.saldo)||0};
-        }
-      }
-      if(json.pinjaman){
-        for(const k in json.pinjaman){
-          const p = json.pinjaman[k];
-          newData.pinjaman[k] = {
-            anggotaId: p.anggotaId||"",
-            nama: p.nama||"",
-            jumlah:Number(p.jumlah)||0,
-            keterangan:p.keterangan||"",
-            tanggal:p.tanggal ? new Date(p.tanggal).toISOString() : new Date().toISOString()
-          };
-        }
-      }
-      if(json.angsuran){
-        for(const k in json.angsuran){
-          const a = json.angsuran[k];
-          newData.angsuran[k] = {
-            pinjamanId: a.pinjamanId||"",
-            nama:a.nama||"",
-            jumlah:Number(a.jumlah)||0,
-            keterangan:a.keterangan||"",
-            tanggal:a.tanggal ? new Date(a.tanggal).toISOString() : new Date().toISOString(),
-            sumberKas:a.sumberKas||a.sumber||"cash"
-          };
-        }
-      }
-      if(json.kas){
-        for(const k in json.kas){
-          const c = json.kas[k];
-          newData.kas[k] = {
-            sumber:c.sumber||"",
-            jumlah:Number(c.jumlah)||0,
-            tanggal:c.tanggal ? new Date(c.tanggal).toISOString() : new Date().toISOString()
-          };
-        }
-      }
-
-      // Set data baru
       await set(koperasiRef,newData);
-      alert("Restore otomatis selesai!");
+      alert("Restore selesai!");
       addLog("Restore Otomatis");
 
     }catch(err){
@@ -206,9 +169,9 @@ document.getElementById("btnRestore").addEventListener("click", ()=>{
   reader.readAsText(file);
 });
 
-// ===== RESET / HAPUS DATA =====
+// ===== RESET =====
 document.getElementById("btnReset").addEventListener("click", async ()=>{
-  if(confirm("Yakin ingin menghapus semua data koperasi? Tindakan ini tidak bisa dibatalkan!")){
+  if(confirm("Yakin ingin menghapus semua data koperasi?")){
     await remove(ref(db,"koperasi"));
     alert("Semua data berhasil dihapus!");
     addLog("Reset Data");
