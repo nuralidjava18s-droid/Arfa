@@ -32,6 +32,314 @@ th{background:#f1f1f1;}
     <button onclick="window.location='dashboard.html'">🔙 Kembali</button>
     <button id="btnPDF">Download PDF</button>
     
+    <button onclick="downloadPDF()">📄 PDF</button>
+  </div>
+</header>
+
+<div class="container">
+
+<div class="card">
+  <select id="filterBulan"></select>
+  <select id="filterTahun"></select>
+  <select id="filterSumber">
+    <option value="semua">Semua</option>
+    <option value="cash">Cash</option>
+    <option value="bank">Bank</option>
+  </select>
+  <button onclick="tampilkanTabel()">Tampilkan</button>
+</div>
+
+<div class="card">
+  <div id="laporanJudul" class="laporan-title">Laporan Kas: Semua</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>Keterangan</th>
+        <th>Masuk</th>
+        <th>Keluar</th>
+        <th>Saldo</th>
+        <th>Sumber</th>
+      </tr>
+    </thead>
+    <tbody id="laporanKas"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">TOTAL</td>
+        <td id="totalMasuk"></td>
+        <td id="totalKeluar"></td>
+        <td id="totalSaldo"></td>
+        <td>-</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
+  authDomain: "arfa-c7dee.firebaseapp.com",
+  databaseURL: "https://arfa-c7dee-default-rtdb.firebaseio.com",
+  projectId: "arfa-c7dee"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const kasRef = ref(db,"koperasi/kas");
+
+let laporanData=[];
+
+/* ================= FILTER SETUP ================= */
+const bulanSelect = document.getElementById("filterBulan");
+const tahunSelect = document.getElementById("filterTahun");
+const bulanList = ["Januari","Februari","Maret","April","Mei","Juni",
+"Juli","Agustus","September","Oktober","November","Desember"];
+
+bulanList.forEach((b,i)=>{
+  bulanSelect.innerHTML += `<option value="${i}">${b}</option>`;
+});
+
+const tahunSekarang = new Date().getFullYear();
+for(let t=tahunSekarang-5; t<=tahunSekarang+1; t++){
+  tahunSelect.innerHTML += `<option value="${t}">${t}</option>`;
+}
+
+bulanSelect.value = new Date().getMonth();
+tahunSelect.value = tahunSekarang;
+
+  
+  
+/* ================= AMBIL DATA ================= */
+async function ambilData(){
+  laporanData = [];
+  const snap = await get(kasRef);
+
+  if(snap.exists()){
+    const data = snap.val();
+
+    for(const k in data){
+      const item = data[k];
+      const jumlah = Number(item.jumlah) || 0;
+      const tipe = item.tipe || "masuk";
+
+      let dateObj;
+      if(typeof item.tanggal === "number"){
+        dateObj = new Date(item.tanggal);
+      } else {
+        const d = new Date(item.tanggal);
+        dateObj = isNaN(d) ? new Date() : d;
+      }
+
+      laporanData.push({
+        tanggal: dateObj,
+        keterangan: item.keterangan || item.sumber || "-",
+        sumber: item.sumberKas || "cash",
+        masuk: tipe==="masuk"?jumlah:0,
+        keluar: tipe==="keluar"?jumlah:0
+      });
+    }
+  }
+
+  tampilkanTabel();
+}
+
+/* ================= TAMPILKAN ================= */
+window.tampilkanTabel = function(){
+  const bulan = Number(bulanSelect.value);
+  const tahun = Number(tahunSelect.value);
+  const sumberFilter = document.getElementById("filterSumber").value;
+  const tbody = document.getElementById("laporanKas");
+  tbody.innerHTML = "";
+
+  let totalMasuk=0, totalKeluar=0, saldo=0;
+
+  const dataFilter = laporanData
+    .filter(i => 
+      i.tanggal.getMonth() <= bulan && 
+      i.tanggal.getFullYear() === tahun &&
+      (sumberFilter === "semua" || i.sumber === sumberFilter)
+    )
+    .sort((a,b)=>a.tanggal - b.tanggal);
+
+  dataFilter.forEach(i=>{
+    saldo += i.masuk;
+    saldo -= i.keluar;
+    totalMasuk += i.masuk;
+    totalKeluar += i.keluar;
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${i.tanggal.toLocaleDateString("id-ID")}</td>
+        <td>${i.keterangan}</td>
+        <td class="masuk">${i.masuk? "Rp "+i.masuk.toLocaleString("id-ID"):"-"}</td>
+        <td class="keluar">${i.keluar? "Rp "+i.keluar.toLocaleString("id-ID"):"-"}</td>
+        <td class="saldo">Rp ${saldo.toLocaleString("id-ID")}</td>
+        <td>${i.sumber.toUpperCase()}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("totalMasuk").innerText="Rp "+totalMasuk.toLocaleString("id-ID");
+  document.getElementById("totalKeluar").innerText="Rp "+totalKeluar.toLocaleString("id-ID");
+  document.getElementById("totalSaldo").innerText="Rp "+saldo.toLocaleString("id-ID");
+
+  document.getElementById("laporanJudul").innerText = 
+    `Laporan Kas: ${sumberFilter==="semua" ? "Semua" : sumberFilter.toUpperCase()}`;
+};
+
+/* ================= PDF ================= */
+/* ================= PDF ================= */
+
+  
+  window.downloadPDF = function(){
+document.addEventListener("DOMContentLoaded", function(){
+   document.getElementById("btnPDF").addEventListener("click", function(){
+      alert("Klik terdeteksi"); // test dulu
+   });
+});
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const sumberFilter = document.getElementById("filterSumber").value;
+  const bulan = Number(bulanSelect.value);
+  const tahun = Number(tahunSelect.value);
+  const judulText = sumberFilter==="semua" ? "Semua" : sumberFilter.toUpperCase();
+
+  const nomorDoc = `KAS/${String(bulan+1).padStart(2,'0')}/${tahun}`;
+  const tanggalCetak = new Date().toLocaleDateString("id-ID");
+
+  const img = new Image();
+  img.src = "img/ims.png";
+
+  img.onload = function(){
+
+    /* ================= WATERMARK ================= */
+    doc.setGState(new doc.GState({opacity:0.08}));
+    doc.addImage(img,"PNG",55,80,100,100);
+    doc.setGState(new doc.GState({opacity:1}));
+
+    /* ================= LOGO ================= */
+    doc.addImage(img,"PNG",15,8,22,24);
+
+    /* ================= KOP ================= */
+    doc.setFontSize(14);
+    doc.setFont(undefined,"bold");
+    doc.text("KOPERASI DRIVER",105,15,{align:"center"});
+
+    doc.setFontSize(11);
+    doc.setFont(undefined,"normal");
+    doc.text("KHALIFA ARFA",105,21,{align:"center"});
+    doc.text("LAPORAN KAS",105,27,{align:"center"});
+
+    doc.setFontSize(9);
+    doc.text(`No: ${nomorDoc}`,180,15,{align:"right"});
+    doc.text(`Cetak: ${tanggalCetak}`,180,20,{align:"right"});
+
+    doc.line(10,38,200,38);
+
+    let rows=[], totalMasuk=0, totalKeluar=0, saldo=0;
+
+    laporanData
+      .filter(i => 
+        i.tanggal.getMonth() <= bulan && 
+        i.tanggal.getFullYear() === tahun &&
+        (sumberFilter === "semua" || i.sumber === sumberFilter)
+      )
+      .sort((a,b)=>a.tanggal - b.tanggal)
+      .forEach(i=>{
+        saldo += i.masuk;
+        saldo -= i.keluar;
+        totalMasuk += i.masuk;
+        totalKeluar += i.keluar;
+
+        rows.push([
+          i.tanggal.toLocaleDateString("id-ID"),
+          i.keterangan,
+          i.masuk ? "Rp "+i.masuk.toLocaleString("id-ID") : "",
+          i.keluar ? "Rp "+i.keluar.toLocaleString("id-ID") : "",
+          "Rp "+saldo.toLocaleString("id-ID"),
+          i.sumber.toUpperCase()
+        ]);
+      });
+
+    /* ================= TABEL ================= */
+    doc.autoTable({
+      head:[["Tanggal","Keterangan","Masuk","Keluar","Saldo","Sumber"]],
+      body: rows,
+      startY:45,
+      styles:{fontSize:8},
+      headStyles:{fillColor:[30,144,255]},
+      columnStyles:{
+        2:{halign:"right"},
+        3:{halign:"right"},
+        4:{halign:"right"}
+      }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 10;
+
+    doc.setFontSize(10);
+    doc.text("Total Masuk : Rp "+totalMasuk.toLocaleString("id-ID"),14,finalY);
+    doc.text("Total Keluar : Rp "+totalKeluar.toLocaleString("id-ID"),14,finalY+6);
+
+    doc.setFontSize(11);
+    doc.setFont(undefined,"bold");
+    doc.text("Saldo Akhir : Rp "+saldo.toLocaleString("id-ID"),14,finalY+14);
+
+    /* ================= TANDA TANGAN ================= */
+    const ttdY = finalY + 30;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined,"normal");
+
+    doc.text("Ketua",30,ttdY);
+    doc.text("Bendahara",150,ttdY,{align:"center"});
+
+    doc.text("(___________________)",30,ttdY+20);
+    doc.text("(___________________)",150,ttdY+20,{align:"center"});
+
+    doc.save("Laporan_Kas_PRO.pdf");
+  };
+};
+  <!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laporan Kas PRO</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+body{font-family:Arial;margin:0;background:#f4f6f9;font-size:13px;}
+header{background:#1e90ff;color:white;padding:12px;display:flex;justify-content:space-between;align-items:center;}
+.container{padding:15px;}
+.card{background:white;padding:12px;margin-bottom:12px;border-radius:10px;box-shadow:0 3px 8px rgba(0,0,0,.08);}
+button{padding:6px 8px;border:none;border-radius:6px;background:#1e90ff;color:white;cursor:pointer;}
+select{padding:6px;margin-right:5px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{border:1px solid #eee;padding:6px;text-align:center;}
+th{background:#f1f1f1;}
+.masuk{color:green;font-weight:bold;}
+.keluar{color:red;font-weight:bold;}
+.saldo{font-weight:bold;}
+.laporan-title{text-align:center;margin:5px 0 10px 0;font-weight:bold;font-size:14px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>💰 Laporan Kas PRO</div>
+  <div>
+    <button onclick="window.location='dashboard.html'">🔙 Kembali</button>
+    <button id="btnPDF">Download PDF</button>
+    
       </div>
 </header>
 
@@ -303,8 +611,14 @@ document.addEventListener("DOMContentLoaded", function(){
     doc.save("Laporan_Kas_PRO.pdf");
   };
 };
+  document.addEventListener("DOMContentLoaded", function(){
+   document.getElementById("btnPDF").addEventListener("click", function(){
+      alert("Donload pdf");
+   });
+});
 ambilData();
 </script>
-
 </body>
-</html>
+</html
+
+
