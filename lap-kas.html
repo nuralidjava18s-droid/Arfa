@@ -30,8 +30,9 @@ th{background:#f1f1f1;}
   <div>💰 Laporan Kas PRO</div>
   <div>
     <button onclick="window.location='dashboard.html'">🔙 Kembali</button>
-    <button onclick="downloadPDF()">📄 PDF</button>
-  </div>
+    <button id="btnPDF">Download PDF</button>
+    
+      </div>
 </header>
 
 <div class="container">
@@ -190,8 +191,14 @@ window.tampilkanTabel = function(){
 
 /* ================= PDF ================= */
 /* ================= PDF ================= */
-window.downloadPDF = function(){
 
+  
+  window.downloadPDF = function(){
+document.addEventListener("DOMContentLoaded", function(){
+   document.getElementById("btnPDF").addEventListener("click", function(){
+      alert("Klik terdeteksi"); // test dulu
+   });
+});
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
 
