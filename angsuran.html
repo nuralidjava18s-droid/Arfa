@@ -51,6 +51,8 @@ Total Angsuran: Rp <span id="totalAngsuran">0</span>
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
+/* ===== FIREBASE CONFIG ===== */
+
 const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
@@ -59,8 +61,7 @@ const firebaseConfig = {
   storageBucket: "arfa-c7dee.firebasestorage.app",
   messagingSenderId: "468058520812",
   appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
-};
-
+}
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
@@ -68,16 +69,23 @@ const pinjamanRef = ref(db,"koperasi/pinjaman");
 const angsuranRef = ref(db,"koperasi/angsuran");
 const kasRef = ref(db,"koperasi/kas");
 
+/* ===== ROLE BASE ===== */
+const role = localStorage.getItem("role") || "user";
+
+/* Jika bukan admin, sembunyikan form */
+if(role !== "admin"){
+document.getElementById("formAngsuran").style.display="none";
+}
+
 function formatRp(n){ return Number(n||0).toLocaleString("id-ID"); }
 
+/* LOAD DROPDOWN */
 async function loadDropdown(){
+if(role!=="admin") return;
 const select=document.getElementById("pinjamanSelect");
 select.innerHTML="";
 const snap=await get(pinjamanRef);
-if(!snap.exists()){
-select.innerHTML="<option>Tidak ada pinjaman</option>";
-return;
-}
+if(!snap.exists()){ select.innerHTML="<option>Tidak ada pinjaman</option>"; return;}
 const data=snap.val();
 for(const k in data){
 select.innerHTML+=`<option value="${k}">${data[k].nama}</option>`;
@@ -85,11 +93,11 @@ select.innerHTML+=`<option value="${k}">${data[k].nama}</option>`;
 }
 loadDropdown();
 
+/* TAMPILKAN */
 async function tampilkanLaporan(){
 const container=document.getElementById("cardsContainer");
 container.innerHTML="";
-let totalPinjaman=0;
-let totalAngsuran=0;
+let totalPinjaman=0,totalAngsuran=0;
 
 const pinSnap=await get(pinjamanRef);
 const angsSnap=await get(angsuranRef);
@@ -100,10 +108,8 @@ const pinData=pinSnap.val();
 const angsData=angsSnap.exists()? angsSnap.val():{};
 
 for(const key in pinData){
-
 let angsTotal=0;
 totalPinjaman+=Number(pinData[key].jumlah||0);
-
 let detail="";
 
 for(const a in angsData){
@@ -114,8 +120,10 @@ detail+=`
 <div style="border-top:1px solid #eee;margin-top:5px;padding-top:5px;">
 Tanggal: ${angsData[a].tanggal || "-"}<br>
 Jumlah: Rp ${formatRp(angsData[a].jumlah)}<br>
+${role==="admin"?`
 <button class="edit" onclick="editAngsuran('${a}')">Edit</button>
 <button class="hapus" onclick="hapusAngsuran('${a}')">Hapus</button>
+`:``}
 </div>
 `;
 }
@@ -144,6 +152,8 @@ tampilkanLaporan();
 
 /* TAMBAH */
 window.tambahAngsuran=async function(){
+if(role!=="admin"){ alert("Tidak punya akses"); return;}
+
 const id=document.getElementById("pinjamanSelect").value;
 const jumlah=Number(document.getElementById("jumlahAngsuran").value);
 if(!jumlah||jumlah<=0){alert("Jumlah tidak valid");return;}
@@ -173,6 +183,8 @@ tampilkanLaporan();
 
 /* EDIT */
 window.editAngsuran=async function(id){
+if(role!=="admin"){ alert("Tidak punya akses"); return;}
+
 const snap=await get(ref(db,"koperasi/angsuran/"+id));
 const data=snap.val();
 const baru=prompt("Edit jumlah:",data.jumlah);
@@ -196,6 +208,7 @@ tampilkanLaporan();
 
 /* HAPUS */
 window.hapusAngsuran=async function(id){
+if(role!=="admin"){ alert("Tidak punya akses"); return;}
 if(!confirm("Yakin hapus?")) return;
 
 await remove(ref(db,"koperasi/angsuran/"+id));
@@ -214,6 +227,5 @@ alert("Hapus berhasil & kas sinkron");
 tampilkanLaporan();
 };
 </script>
-
 </body>
 </html>
