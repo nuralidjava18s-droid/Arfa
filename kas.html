@@ -109,6 +109,7 @@ import { getDatabase, ref, push, onValue }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 /* ===== CONFIG FIREBASE ===== */
+
 const firebaseConfig = {
   apiKey: "AIzaSyDd0s73-qW2uiOlBWR-afybFZzMafCHeSo",
   authDomain: "arfa-c7dee.firebaseapp.com",
@@ -118,7 +119,7 @@ const firebaseConfig = {
   messagingSenderId: "468058520812",
   appId: "1:468058520812:web:f9cbc82fe7e88ecda9b9c9"
 };
-
+  
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const kasRef = ref(db,"koperasi/kas");
@@ -128,8 +129,15 @@ const username = localStorage.getItem("user");
 const role = localStorage.getItem("role") || "user";
 if(!username) window.location.href="index.html";
 
-/* Hanya admin bisa input kas */
-if(role !== "admin") document.getElementById("cardInput").style.display = "none";
+/* Hanya admin bisa input */
+if(role !== "admin"){
+  document.getElementById("cardInput").style.display = "none";
+}
+
+/* ===== FORMAT RUPIAH ===== */
+function rupiah(angka){
+  return Number(angka || 0).toLocaleString("id-ID");
+}
 
 /* ================= SIMPAN ================= */
 document.getElementById("btnSimpan")?.addEventListener("click", async ()=>{
@@ -157,7 +165,7 @@ document.getElementById("btnSimpan")?.addEventListener("click", async ()=>{
   document.getElementById("keterangan").value="";
 });
 
-/* ================= HITUNG & TAMPIL ================= */
+/* ================= TAMPIL DATA ================= */
 onValue(kasRef, snapshot => {
 
   let masukCash=0, keluarCash=0;
@@ -169,19 +177,26 @@ onValue(kasRef, snapshot => {
   if(snapshot.exists()){
     const data = snapshot.val();
 
-    for(const k in data){
-      const i = data[k];
+    // URUTKAN TERBARU
+    const list = Object.values(data)
+      .sort((a,b)=> (b.tanggal||0) - (a.tanggal||0));
+
+    list.forEach(i=>{
+
       const jumlah = Number(i.jumlah) || 0;
       const tipe = i.tipe || "masuk";
       const sumberKas = i.sumberKas || "cash";
 
-      // Tanggal aman
-      let tanggalObj;
-      if(typeof i.tanggal === "number") tanggalObj = new Date(i.tanggal);
-      else tanggalObj = new Date(i.tanggal || Date.now());
-      const tanggalStr = isNaN(tanggalObj) ? "-" : tanggalObj.toLocaleString();
+      // ===== TANGGAL AMAN =====
+      let tanggalObj = null;
+      if(i.tanggal && typeof i.tanggal === "number"){
+        tanggalObj = new Date(i.tanggal);
+      }
+      const tanggalStr = tanggalObj
+        ? tanggalObj.toLocaleString("id-ID")
+        : "-";
 
-      // Hitung saldo
+      // HITUNG SALDO
       if(sumberKas==="cash"){
         if(tipe==="masuk") masukCash+=jumlah;
         else keluarCash+=jumlah;
@@ -205,28 +220,23 @@ onValue(kasRef, snapshot => {
             (${sumberKas.toUpperCase()})
           </div>
           <div class="${tipe}">
-            Rp ${jumlah.toLocaleString("id-ID")}
+            Rp ${rupiah(jumlah)}
           </div>
         </div>
         <div>${i.keterangan} - ${tanggalStr}</div>
       `;
 
-      riwayatDiv.prepend(div);
-    }
+      riwayatDiv.appendChild(div);
+    });
   }
 
   const saldoCash = masukCash - keluarCash;
   const saldoBank = masukBank - keluarBank;
   const total = saldoCash + saldoBank;
 
-  document.getElementById("saldoCash").innerText =
-    saldoCash.toLocaleString("id-ID");
-
-  document.getElementById("saldoBank").innerText =
-    saldoBank.toLocaleString("id-ID");
-
-  document.getElementById("saldoTotal").innerText =
-    total.toLocaleString("id-ID");
+  document.getElementById("saldoCash").innerText = rupiah(saldoCash);
+  document.getElementById("saldoBank").innerText = rupiah(saldoBank);
+  document.getElementById("saldoTotal").innerText = rupiah(total);
 });
 </script>
 
