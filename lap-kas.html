@@ -30,6 +30,9 @@ th{background:#f1f1f1;}
   <div>💰 Laporan Kas PRO</div>
   <div>
     <button onclick="window.location='dashboard.html'">🔙 Kembali</button>
+    <select id="pilihAnggota">
+  <option value="">Pilih Anggota</option>
+</select>
     <button id="btnPDF">Download PDF</button>
     
       </div>
@@ -90,7 +93,26 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const kasRef = ref(db,"koperasi/kas");
+const anggotaRef = ref(db,"koperasi/anggota");
+let anggotaData = {};
 
+async function loadAnggota(){
+  const snap = await get(anggotaRef);
+  const select = document.getElementById("pilihAnggota");
+
+  if(snap.exists()){
+    const data = snap.val();
+    anggotaData = data;
+
+    for(const id in data){
+      const a = data[id];
+      select.innerHTML += 
+        `<option value="${id}">${a.nama}</option>`;
+    }
+  }
+}
+
+loadAnggota();
 let laporanData=[];
 
 /* ================= FILTER SETUP ================= */
@@ -291,17 +313,35 @@ window.downloadPDF = function(){
     doc.save(namaFile);
 
     /* ===== AUTO WA ===== */
-    const pesan = encodeURIComponent(
-      `Laporan Kas ${judulText}\nPeriode: ${periodeText}\nFile: ${namaFile}\nSilakan kirim file yang baru saja di-download.`
-    );
+    /* ===== AUTO WA KE ANGGOTA ===== */
+const anggotaId = document.getElementById("pilihAnggota").value;
 
-    setTimeout(()=>{
-      window.open(`https://api.whatsapp.com/send?text=${pesan}`,"_blank");
-    },600);
+if(!anggotaId){
+  alert("Pilih anggota dulu");
+  return;
+}
 
-  };
+const dataAnggota = anggotaData[anggotaId];
 
-};
+if(!dataAnggota || !dataAnggota.nohp){
+  alert("Nomor anggota tidak ditemukan");
+  return;
+}
+
+/* ubah 08 jadi 628 */
+let nomorTujuan = dataAnggota.nohp.replace(/^0/, "62");
+
+const pesan = encodeURIComponent(
+  `Halo ${dataAnggota.nama}\n\n`+
+  `Laporan Kas ${judulText}\n`+
+  `Periode: ${periodeText}\n`+
+  `File: ${namaFile}\n\n`+
+  `Silakan kirim file PDF yang baru saja di-download.`
+);
+
+setTimeout(()=>{
+  window.open(`https://wa.me/${nomorTujuan}?text=${pesan}`,"_blank");
+},600);
   document.getElementById("btnPDF").addEventListener("click", downloadPDF);
   
 ambilData();
