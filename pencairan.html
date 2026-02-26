@@ -11,8 +11,68 @@
 
 <style>
 body{font-family:Arial,sans-serif;margin:0;background:#f4f6f9;}
-header{background:#1e90ff;color:white;padding:12px;display:flex;justify-content:space-between;align-items:center;font-size:12px;}
 
+  /* HEADER */
+header{
+  background: linear-gradient(to right, #1e90ff, #0f3057);
+  color:white;
+  padding:14px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 3px 10px rgba(0,0,0,0.2);
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brand img{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.brand-text .subtitle{
+  font-size:12px;
+  opacity:0.9;
+}
+
+.brand-text .title{
+  font-size:16px;
+  font-weight:bold;
+}
+
+.user-section{
+  position:relative;
+  cursor:pointer;
+  font-size:13px;
+}
+
+.dropdown-menu{
+  display:none;
+  position:absolute;
+  right:0;
+  top:40px;
+  background:white;
+  color:#333;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.2);
+  overflow:hidden;
+  min-width:130px;
+}
+
+.dropdown-menu div{
+  padding:10px;
+  font-weight:bold;
+}
+
+.dropdown-menu div:hover{
+  background:#f0f0f0;
+}
   
 .container{padding:14px;}
 .card{
@@ -49,17 +109,24 @@ button{padding:6px 8px;font-size:12px;border:none;border-radius:6px;background:#
 
 <body>
   <header>
-  <div>📄Pencairan simpanan sukarela</div>
-  <div>
+    <div class="brand">
+    <img src="img/icon-192.png">
+    <div class="brand-text">
+      <div class="subtitle">Koperasi</div>
+      <div class="title">ARFA DRIVER</div>
+    </div>
+  </div>
+  
     <button onclick="window.location='dashboard.html'">Kembali</button>
-    <button onclick="exportPDF()">Export PDF</button>
- 
+   
   </div>
 </header>
 
 
 
 <div class="card">
+  <div>📄Pencairan simpanan sukarela</div>
+  <div>
   <label>Pilih Anggota</label>
   <select id="anggotaSelect"></select>
 
@@ -67,6 +134,8 @@ button{padding:6px 8px;font-size:12px;border:none;border-radius:6px;background:#
     Saldo Sukarela: 
     <strong>Rp <span id="saldo">0</span></strong>
   </div>
+   <button onclick="exportPDF()">Export PDF</button>
+ 
 </div>
 
 <div class="card adminOnly">
