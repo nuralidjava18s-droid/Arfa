@@ -1,5 +1,10 @@
 const CACHE_NAME = "arfa-koperasi-v3";
 const urlsToCache = [
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js",
+  "./img/ims.png",
+  "./img/icon-192.png",
+  "./img/icon-512.png",  // <-- koma ditambahkan
   "./",
   "./index.html",
   "./dashboard.html",
@@ -28,7 +33,7 @@ self.addEventListener("activate", event => {
         keys.filter(key => key !== CACHE_NAME)
             .map(key => caches.delete(key))
       )
-    )
+    ).then(() => self.clients.claim())
   );
 });
 
