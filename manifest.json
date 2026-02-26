@@ -9,6 +9,11 @@
   "description": "Aplikasi Koperasi Driver Khalifa untuk admin dan user monitoring transaksi.",
   "icons": [
     {
+      "src": "img/ims.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
       "src": "img/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
