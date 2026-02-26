@@ -129,20 +129,9 @@ async function ambilData(){
       const anggotaId = item.anggotaId || "";
       let tanggal = new Date(item.tanggal);
       if(isNaN(tanggal)) tanggal = new Date();
-
-      // Buat keterangan sesuai transaksi
-      let keterangan = "-";
-      if(item.sumberKas && item.sumberKas.startsWith("Pencairan Pinjaman -")){
-        // ambil nama peminjam dari string
-        const parts = item.sumberKas.split(" - ");
-        keterangan = `Pinjaman ${parts[1] || "-"}`;
-      } else if(item.keterangan || item.ket) {
-        keterangan = item.keterangan || item.ket;
-      }
-
       laporanData.push({
         tanggal,
-        keterangan,
+        keterangan: item.keterangan || "-",
         sumber: item.sumberKas || "cash",
         masuk: tipe==="masuk"?jumlah:0,
         keluar: tipe==="keluar"?jumlah:0,
@@ -153,7 +142,7 @@ async function ambilData(){
   tampilkanTabel();
 }
 
-// Tampilkan tabel di halaman
+// Tampilkan tabel
 function tampilkanTabel(){
   const bulan = Number(bulanSelect.value);
   const tahun = Number(tahunSelect.value);
@@ -202,6 +191,7 @@ async function downloadPDFKas(){
   const tahun = Number(tahunSelect.value);
   const sumberFilter = document.getElementById("filterSumber").value;
   const anggotaId = document.getElementById("pilihAnggota").value;
+  const bulanText = bulanList[bulan];
   const nomorDoc = `KAS/${String(bulan).padStart(2,'0')}/${tahun}`;
   const namaFile = `Laporan_Kas_${tanggalCetak.replace(/\//g,"-")}.pdf`;
 
@@ -210,6 +200,7 @@ async function downloadPDFKas(){
 
   img.onload = function(){
     doc.addImage(img,"PNG",15,8,22,22);
+
     doc.setFontSize(14);
     doc.setFont(undefined,"bold");
     doc.text("KOPERASI DRIVER",105,15,{align:"center"});
@@ -232,18 +223,15 @@ async function downloadPDFKas(){
       return [
         i.tanggal.toLocaleDateString("id-ID"),
         i.keterangan,
-        i.masuk?"Rp "+i.masuk.toLocaleString("id-ID"):"-",
-        i.keluar?"Rp "+i.keluar.toLocaleString("id-ID"):"-",
+        i.masuk?"Rp "+i.masuk.toLocaleString("id-ID"):"",
+        i.keluar?"Rp "+i.keluar.toLocaleString("id-ID"):"",
         "Rp "+saldo.toLocaleString("id-ID"),
         i.sumber.toUpperCase()
       ];
     });
 
-    doc.autoTable({ 
-      head:[["Tanggal","Keterangan","Masuk","Keluar","Saldo","Sumber"]],
-      body:rows,
-      startY:40,
-      styles:{fontSize:8},
+    doc.autoTable({ head:[["Tanggal","Keterangan","Masuk","Keluar","Saldo","Sumber"]],
+      body:rows,startY:40,styles:{fontSize:8},
       columnStyles:{2:{halign:"right"},3:{halign:"right"},4:{halign:"right"}} 
     });
 
